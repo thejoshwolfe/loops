@@ -1,7 +1,4 @@
 {
-  "scripts": {
-    "build": "tsc --sourceMap --removeComments --strict --noImplicitAny --strictNullChecks --strictFunctionTypes --strictPropertyInitialization --noImplicitThis --alwaysStrict --noUnusedLocals --noUnusedParameters --noImplicitReturns --noFallthroughCasesInSwitch a.ts"
-  },
   "dependencies": {
     "typescript": "^3.0.1"
   }
