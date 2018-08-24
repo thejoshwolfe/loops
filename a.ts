@@ -16,8 +16,9 @@ window.addEventListener("resize", function() {
   handleResize();
 });
 canvas.addEventListener("mousedown", function(event: MouseEvent) {
-  void [event.x, event.y]; // TODO
-  drawIt();
+  const tile_x = Math.floor((event.x - origin_x) / scale);
+  const tile_y = Math.floor((event.y - origin_y) / scale);
+  rotateTile(tile_x, tile_y);
 });
 
 // these are calculated below
@@ -41,7 +42,6 @@ function handleResize() {
 
   origin_x = canvas.width / 2 - scale * tiles_per_row / 2;
   origin_y = canvas.height / 2 - scale * tiles_per_column / 2;
-  console.log(origin_x, origin_y);
 
   drawIt();
 }
@@ -53,13 +53,53 @@ function drawIt() {
 
   for (var y = 0; y < tiles_per_column; y++) {
     for (var x = 0; x < tiles_per_row; x++) {
-      const tile = tiles[y * tiles_per_row + x];
-      context.fillStyle = tile === 0 ? "#888" : "#000";
-      context.beginPath();
-      context.arc(origin_x + scale*(x + 0.5), origin_y + scale*(y + 0.5), scale/2, 0, 2*pi);
-      context.fill();
+      const tile = tiles[tileIndex(x, y)];
+      context.fillStyle = "#000";
+      context.lineWidth = scale * 0.1;
+      context.lineCap = "round";
+      if (tile & 1) {
+        context.beginPath();
+        context.moveTo(origin_x + scale*(x + 0.5), origin_y + scale*(y + 0.5));
+        context.lineTo(origin_x + scale*(x + 1.0), origin_y + scale*(y + 0.5));
+        context.stroke();
+      }
+      if (tile & 2) {
+        context.beginPath();
+        context.moveTo(origin_x + scale*(x + 0.5), origin_y + scale*(y + 0.5));
+        context.lineTo(origin_x + scale*(x + 0.5), origin_y + scale*(y + 1.0));
+        context.stroke();
+      }
+      if (tile & 4) {
+        context.beginPath();
+        context.moveTo(origin_x + scale*(x + 0.5), origin_y + scale*(y + 0.5));
+        context.lineTo(origin_x + scale*(x + 0.0), origin_y + scale*(y + 0.5));
+        context.stroke();
+      }
+      if (tile & 8) {
+        context.beginPath();
+        context.moveTo(origin_x + scale*(x + 0.5), origin_y + scale*(y + 0.5));
+        context.lineTo(origin_x + scale*(x + 0.5), origin_y + scale*(y + 0.0));
+        context.stroke();
+      }
     }
   }
+}
+
+function tileIndex(x: number, y: number): number {
+  return y * tiles_per_row + x;
+}
+
+function rotateTile(x: number, y: number) {
+  if (x <= 0 || x >= tiles_per_row - 1 ||
+      y <= 0 || y >= tiles_per_column - 1) {
+    // out of bounds
+    return;
+  }
+  const index = tileIndex(x, y);
+  var tile = tiles[index];
+  tile = 0xf & ((tile << 1) | (tile >> 3));
+  tiles[index] = tile;
+  drawIt();
 }
 
 handleResize();
