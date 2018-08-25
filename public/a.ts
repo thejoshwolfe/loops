@@ -9,12 +9,13 @@ const pi = Math.PI;
 //   2
 
 var tiles = [
-  0,0,0,0,
-  0,3,4,0,
-  0,9,4,0,
-  0,0,0,0,
+  0,0,0,0,0,
+  0,3,4,0,0,
+  0,9,4,15,0,
+  0,5,7,0,0,
+  0,0,0,0,0,
 ];
-var tiles_per_row = 4;
+var tiles_per_row = 5;
 var tiles_per_column = tiles.length / tiles_per_row;
 
 window.addEventListener("resize", function() {
@@ -84,17 +85,18 @@ function drawIt() {
       case 2: tile = 1; context.rotate(pi/2); break;
       case 3: break;
       case 4: tile = 1; context.rotate(pi); break;
-      case 5: throw new AssertionFailure(); // TODO
+      case 5: break;
       case 6: tile = 3; context.rotate(pi/2); break;
-      case 7: throw new AssertionFailure(); // TODO
+      case 7: break;
       case 8: tile = 1; context.rotate(pi*1.5); break;
       case 9: tile = 3; context.rotate(pi*1.5); break;
-      case 10: throw new AssertionFailure(); // TODO
-      case 11: throw new AssertionFailure(); // TODO
+      case 10: tile = 5; context.rotate(pi/2); break;
+      case 11: tile = 7; context.rotate(pi*1.5); break;
       case 12: tile = 3; context.rotate(pi); break;
-      case 13: throw new AssertionFailure(); // TODO
-      case 14: throw new AssertionFailure(); // TODO
-      case 15: throw new AssertionFailure(); // TODO
+      case 13: tile = 7; context.rotate(pi); break;
+      case 14: tile = 7; context.rotate(pi/2); break;
+      case 15: break;
+      default: throw new AssertionFailure();
     }
     switch (tile) {
       case 1:
@@ -108,8 +110,36 @@ function drawIt() {
         context.arc(scale * 0.5, scale * 0.5, scale * 0.5, pi, pi*1.5);
         context.stroke();
         break;
+      case 5:
+        context.beginPath();
+        context.moveTo(scale * 0.5, 0);
+        context.lineTo(scale * -0.5, 0);
+        context.stroke();
+        break;
+      case 7:
+        context.beginPath();
+        context.arc(scale * -0.5, scale * 0.5, scale * 0.5, pi*1.5, 2*pi);
+        context.stroke();
+        context.beginPath();
+        context.arc(scale * 0.5, scale * 0.5, scale * 0.5, pi, pi*1.5);
+        context.stroke();
+        break;
+      case 15:
+        context.beginPath();
+        context.arc(scale * 0.5, scale * 0.5, scale * 0.5, pi, pi*1.5);
+        context.stroke();
+        context.beginPath();
+        context.arc(scale * 0.5, scale * -0.5, scale * 0.5, pi/2, pi);
+        context.stroke();
+        context.beginPath();
+        context.arc(scale * -0.5, scale * -0.5, scale * 0.5, 0, pi/2);
+        context.stroke();
+        context.beginPath();
+        context.arc(scale * -0.5, scale * 0.5, scale * 0.5, pi*1.5, 2*pi);
+        context.stroke();
+        break;
       default:
-        throw new AssertionFailure(); // TODO
+        throw new AssertionFailure();
     }
   }
 }
