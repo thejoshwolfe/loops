@@ -291,6 +291,38 @@ function generateLevel(tiles_per_row: number, tiles_per_column: number): Level {
       }
     }
   }
+
+  // make sure nothing is too easy
+  for (var y = 1; y < tiles_per_column - 1; y++) {
+    for (var x = 1; x < tiles_per_row - 1; x++) {
+      if (Math.random() < 0.5) {
+        checkRight();
+        checkDown();
+      } else {
+        checkDown();
+        checkRight();
+      }
+    }
+  }
+  function checkRight() {
+    if (x < tiles_per_row - 2 && (
+        level.tiles[y * tiles_per_row + x] === 0 ||
+        level.tiles[y * tiles_per_row + x + 1] === 0)) {
+      // connect right
+      level.tiles[y * tiles_per_row + x] |= 1;
+      level.tiles[y * tiles_per_row + x + 1] |= 4;
+    }
+  }
+  function checkDown() {
+    if (y < tiles_per_column - 2 && (
+        level.tiles[y * tiles_per_row + x] === 0 ||
+        level.tiles[(y + 1) * tiles_per_row + x] === 0)) {
+      // connect down
+      level.tiles[y * tiles_per_row + x] |= 2;
+      level.tiles[(y + 1) * tiles_per_row + x] |= 8;
+    }
+  }
+
   // rotate the tiles randomly
   for (var y = 1; y < tiles_per_column - 1; y++) {
     for (var x = 1; x < tiles_per_row - 1; x++) {
