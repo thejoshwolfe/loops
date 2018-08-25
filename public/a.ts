@@ -3,10 +3,15 @@ const footer = document.getElementById("footer")!;
 
 const pi = Math.PI;
 
+// a tile is a bitfield:
+//   8
+// 4   1
+//   2
+
 var tiles = [
   0,0,0,0,
-  0,9,4,0,
   0,3,4,0,
+  0,9,4,0,
   0,0,0,0,
 ];
 var tiles_per_row = 4;
@@ -16,6 +21,10 @@ window.addEventListener("resize", function() {
   handleResize();
 });
 canvas.addEventListener("mousedown", function(event: MouseEvent) {
+  if (event.altKey || event.ctrlKey || event.shiftKey) {
+    return;
+  }
+  event.preventDefault();
   const tile_x = Math.floor((event.x - origin_x) / scale);
   const tile_y = Math.floor((event.y - origin_y) / scale);
   rotateTile(tile_x, tile_y);
@@ -51,36 +60,56 @@ function drawIt() {
   context.fillStyle = "#fff";
   context.fillRect(0, 0, canvas.width, canvas.height);
 
+  context.fillStyle = "#000";
+  context.lineWidth = scale * 0.1;
+  context.lineCap = "round";
   for (var y = 0; y < tiles_per_column; y++) {
     for (var x = 0; x < tiles_per_row; x++) {
       const tile = tiles[tileIndex(x, y)];
-      context.fillStyle = "#000";
-      context.lineWidth = scale * 0.1;
-      context.lineCap = "round";
-      if (tile & 1) {
-        context.beginPath();
-        context.moveTo(origin_x + scale*(x + 0.5), origin_y + scale*(y + 0.5));
-        context.lineTo(origin_x + scale*(x + 1.0), origin_y + scale*(y + 0.5));
-        context.stroke();
+      context.save();
+      try {
+        renderTile(tile, x, y);
+      } finally {
+        context.restore();
       }
-      if (tile & 2) {
+    }
+  }
+
+  function renderTile(tile: number, x: number, y: number) {
+    context.translate(origin_x + scale*(x + 0.5), origin_y + scale*(y + 0.5));
+    // normalize rotation
+    switch (tile) {
+      case 0: return;
+      case 1: break;
+      case 2: tile = 1; context.rotate(pi/2); break;
+      case 3: break;
+      case 4: tile = 1; context.rotate(pi); break;
+      case 5: throw new AssertionFailure(); // TODO
+      case 6: tile = 3; context.rotate(pi/2); break;
+      case 7: throw new AssertionFailure(); // TODO
+      case 8: tile = 1; context.rotate(pi*1.5); break;
+      case 9: tile = 3; context.rotate(pi*1.5); break;
+      case 10: throw new AssertionFailure(); // TODO
+      case 11: throw new AssertionFailure(); // TODO
+      case 12: tile = 3; context.rotate(pi); break;
+      case 13: throw new AssertionFailure(); // TODO
+      case 14: throw new AssertionFailure(); // TODO
+      case 15: throw new AssertionFailure(); // TODO
+    }
+    switch (tile) {
+      case 1:
         context.beginPath();
-        context.moveTo(origin_x + scale*(x + 0.5), origin_y + scale*(y + 0.5));
-        context.lineTo(origin_x + scale*(x + 0.5), origin_y + scale*(y + 1.0));
+        context.arc(0, 0, scale*0.25, 0, 2*pi);
+        context.lineTo(scale * 0.5, 0);
         context.stroke();
-      }
-      if (tile & 4) {
+        break;
+      case 3:
         context.beginPath();
-        context.moveTo(origin_x + scale*(x + 0.5), origin_y + scale*(y + 0.5));
-        context.lineTo(origin_x + scale*(x + 0.0), origin_y + scale*(y + 0.5));
+        context.arc(scale * 0.5, scale * 0.5, scale * 0.5, pi, pi*1.5);
         context.stroke();
-      }
-      if (tile & 8) {
-        context.beginPath();
-        context.moveTo(origin_x + scale*(x + 0.5), origin_y + scale*(y + 0.5));
-        context.lineTo(origin_x + scale*(x + 0.5), origin_y + scale*(y + 0.0));
-        context.stroke();
-      }
+        break;
+      default:
+        throw new AssertionFailure(); // TODO
     }
   }
 }
@@ -101,5 +130,6 @@ function rotateTile(x: number, y: number) {
   tiles[index] = tile;
   drawIt();
 }
+class AssertionFailure {}
 
 handleResize();
