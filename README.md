@@ -10,5 +10,5 @@ https://wolfesoftware.com/loops/
 
 ```
 npm install
-./node_modules/.bin/tsc --sourceMap --removeComments --strict --noImplicitAny --strictNullChecks --strictFunctionTypes --strictPropertyInitialization --noImplicitThis --alwaysStrict --noUnusedLocals --noUnusedParameters --noImplicitReturns --noFallthroughCasesInSwitch a.ts
+./node_modules/.bin/tsc --sourceMap --removeComments --strict --noImplicitAny --strictNullChecks --strictFunctionTypes --strictPropertyInitialization --noImplicitThis --alwaysStrict --noUnusedLocals --noUnusedParameters --noImplicitReturns --noFallthroughCasesInSwitch public/a.ts
 ```
