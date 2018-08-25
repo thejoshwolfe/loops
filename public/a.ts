@@ -1,5 +1,6 @@
 const canvas = document.getElementById("canvas")! as HTMLCanvasElement;
 const footer = document.getElementById("footer")!;
+const buffer_canvas = document.createElement("canvas");
 
 const pi = Math.PI;
 
@@ -47,6 +48,13 @@ var tiles = [
 var tiles_per_row = 3;
 var tiles_per_column = tiles.length / tiles_per_row;
 
+enum GameState {
+    Playing,
+    FadeOut,
+    FadeIn,
+}
+var game_state = GameState.Playing;
+
 function loadLevel(level: Level) {
   tiles = level.tiles.slice();
   tiles_per_row = level.tiles_per_row;
@@ -58,10 +66,9 @@ window.addEventListener("resize", function() {
   handleResize();
 });
 canvas.addEventListener("mousedown", function(event: MouseEvent) {
-  if (event.altKey || event.ctrlKey || event.shiftKey) {
-    return;
-  }
+  if (event.altKey || event.ctrlKey || event.shiftKey) return;
   event.preventDefault();
+  if (game_state !== GameState.Playing) return;
   const tile_x = Math.floor((event.x - origin_x) / scale);
   const tile_y = Math.floor((event.y - origin_y) / scale);
   rotateTile(tile_x, tile_y);
@@ -74,6 +81,8 @@ var origin_y = -50;
 function handleResize() {
   canvas.width = document.documentElement.clientWidth;
   canvas.height = document.documentElement.clientHeight - footer.clientHeight;
+  buffer_canvas.width = canvas.width;
+  buffer_canvas.height = canvas.height;
 
   // cut off half of the border tiles
   const display_tiles_per_column = tiles_per_column - 1;
@@ -89,13 +98,13 @@ function handleResize() {
   origin_x = canvas.width / 2 - scale * tiles_per_row / 2;
   origin_y = canvas.height / 2 - scale * tiles_per_column / 2;
 
-  drawIt();
+  renderEverything();
 }
 
-function drawIt() {
-  const context = canvas.getContext("2d")!;
+function renderEverything() {
+  const context = buffer_canvas.getContext("2d")!;
   context.fillStyle = "#fff";
-  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.fillRect(0, 0, buffer_canvas.width, buffer_canvas.height);
 
   context.fillStyle = "#000";
   context.lineWidth = scale * 0.1;
@@ -111,6 +120,15 @@ function drawIt() {
       }
     }
   }
+
+  // render the game into the real canvas with the alpha blend
+  const real_context = canvas.getContext("2d")!;
+  real_context.fillStyle = "#fff";
+  real_context.fillRect(0, 0, canvas.width, canvas.height);
+  real_context.save();
+  real_context.globalAlpha = global_alpha;
+  real_context.drawImage(buffer_canvas, 0, 0);
+  real_context.restore();
 
   function renderTile(tile: number, x: number, y: number) {
     context.translate(origin_x + scale*(x + 0.5), origin_y + scale*(y + 0.5));
@@ -194,7 +212,7 @@ function rotateTile(x: number, y: number) {
   var tile = tiles[index];
   tile = 0xf & ((tile << 1) | (tile >> 3));
   tiles[index] = tile;
-  drawIt();
+  renderEverything();
 
   checkForDone();
 }
@@ -211,6 +229,36 @@ function checkForDone() {
     }
   }
   // everything is done
+  beginLevelTransition();
+}
+var global_alpha = 1.0;
+function beginLevelTransition() {
+  game_state = GameState.FadeOut;
+  const start_time = new Date().getTime();
+  animate();
+
+  function animate() {
+    const progress = (new Date().getTime() - start_time) / 1000;
+    if (progress < 1) {
+      global_alpha = 1 - progress;
+    } else if (progress < 2) {
+      if (game_state === GameState.FadeOut) {
+        loadNewLevel();
+        game_state = GameState.FadeIn;
+      }
+      global_alpha = progress - 1;
+    } else {
+      // done
+      game_state = GameState.Playing;
+      global_alpha = 1.0;
+    }
+    renderEverything();
+    if (game_state !== GameState.Playing) {
+      requestAnimationFrame(animate);
+    }
+  }
+}
+function loadNewLevel() {
   if (tutorial_index < tutorial_levels.length - 1) {
     tutorial_index += 1;
     loadLevel(tutorial_levels[tutorial_index]);
