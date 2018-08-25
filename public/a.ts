@@ -8,15 +8,51 @@ const pi = Math.PI;
 // 4   1
 //   2
 
-var tiles = [
-  0,0,0,0,0,
-  0,3,4,0,0,
-  0,9,4,15,0,
-  0,5,7,0,0,
-  0,0,0,0,0,
+type Level = {tiles_per_row: number, tiles: number[]};
+const tutorial_levels: Level[] = [
+  { tiles_per_row: 4,
+    tiles: [
+      0,0,0,0,
+      0,6,1,0,
+      0,6,2,0,
+      0,0,0,0,
+    ],
+  },
+  { tiles_per_row: 5,
+    tiles: [
+      0, 0, 0, 0, 0,
+      0, 6,14,12, 0,
+      0, 3, 9, 4, 0,
+      0, 0, 0, 0, 0,
+    ],
+  },
+  { tiles_per_row: 5,
+    tiles: [
+      0, 0, 0, 0, 0,
+      0, 2, 3, 4, 0,
+      0, 2, 1, 5, 0,
+      0,12, 1, 4, 0,
+      0, 0, 0, 0, 0,
+    ]
+  },
 ];
-var tiles_per_row = 5;
+var tutorial_index = 0;
+
+// these are set by loadLevel()
+var tiles = [
+  0,0,0,
+  0,3,0,
+  0,0,0,
+];
+var tiles_per_row = 3;
 var tiles_per_column = tiles.length / tiles_per_row;
+
+function loadLevel(level: Level) {
+  tiles = level.tiles.slice();
+  tiles_per_row = level.tiles_per_row;
+  tiles_per_column = tiles.length / tiles_per_row;
+  handleResize();
+}
 
 window.addEventListener("resize", function() {
   handleResize();
@@ -159,7 +195,68 @@ function rotateTile(x: number, y: number) {
   tile = 0xf & ((tile << 1) | (tile >> 3));
   tiles[index] = tile;
   drawIt();
+
+  checkForDone();
 }
+
+function checkForDone() {
+  // the border tiles don't rotate, so they're always solved.
+  for (var y = 0; y < tiles_per_column - 1; y++) {
+    for (var x = 0; x < tiles_per_row - 1; x++) {
+      const tile = tiles[tileIndex(x, y)];
+      const right_tile = tiles[tileIndex(x + 1, y)];
+      const down_tile = tiles[tileIndex(x, y + 1)];
+      if (!!(tile & 1) !== !!(right_tile & 4)) return;
+      if (!!(tile & 2) !== !!(down_tile & 8)) return;
+    }
+  }
+  // everything is done
+  if (tutorial_index < tutorial_levels.length - 1) {
+    tutorial_index += 1;
+    loadLevel(tutorial_levels[tutorial_index]);
+  } else {
+    loadLevel(generateLevel(tiles_per_row + 1, tiles_per_row + 1));
+  }
+}
+
+function generateLevel(tiles_per_row: number, tiles_per_column: number): Level {
+  const level: Level = {
+    tiles_per_row,
+    tiles: [],
+  };
+  for (var i = 0; i < tiles_per_row * tiles_per_column; i++) {
+    level.tiles.push(0);
+  }
+
+  // generate a solved puzzle
+  for (var y = 1; y < tiles_per_column - 2; y++) {
+    for (var x = 1; x < tiles_per_row - 2; x++) {
+      if (Math.random() < 0.5) {
+        // connect right
+        level.tiles[y * tiles_per_row + x] |= 1;
+        level.tiles[y * tiles_per_row + x + 1] |= 4;
+      }
+      if (Math.random() < 0.5) {
+        // connect down
+        level.tiles[y * tiles_per_row + x] |= 2;
+        level.tiles[(y + 1) * tiles_per_row + x] |= 8;
+      }
+    }
+  }
+  // rotate the tiles randomly
+  for (var y = 1; y < tiles_per_column - 1; y++) {
+    for (var x = 1; x < tiles_per_row - 1; x++) {
+      const rotations = Math.floor(Math.random() * 4);
+      if (rotations === 0) continue;
+      const index = y * tiles_per_row + x;
+      var tile = level.tiles[index];
+      tile = 0xf & ((tile << rotations) | (tile >> (4 - rotations)));
+      level.tiles[index] = tile;
+    }
+  }
+  return level;
+}
+
 class AssertionFailure {}
 
-handleResize();
+loadLevel(tutorial_levels[tutorial_index]);
