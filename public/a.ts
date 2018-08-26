@@ -278,14 +278,14 @@ function generateLevel(tiles_per_row: number, tiles_per_column: number): Level {
   const level = new Level(tiles_per_row, tiles_per_column);
 
   // generate a solved puzzle
-  for (var y = 1; y < tiles_per_column - 2; y++) {
-    for (var x = 1; x < tiles_per_row - 2; x++) {
-      if (Math.random() < 0.5) {
+  for (var y = 1; y < tiles_per_column - 1; y++) {
+    for (var x = 1; x < tiles_per_row - 1; x++) {
+      if (x < tiles_per_row - 2 && Math.random() < 0.5) {
         // connect right
         level.tiles[level.tileIndex(x, y)] |= 1;
         level.tiles[level.tileIndex(x + 1, y)] |= 4;
       }
-      if (Math.random() < 0.5) {
+      if (y < tiles_per_column - 2 && Math.random() < 0.5) {
         // connect down
         level.tiles[level.tileIndex(x, y)] |= 2;
         level.tiles[level.tileIndex(x, y + 1)] |= 8;
