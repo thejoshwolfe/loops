@@ -4,9 +4,16 @@ const buffer_canvas = document.createElement("canvas");
 
 const pi = Math.PI;
 
-var level_number = 0;
+enum GameState {
+    Playing,
+    FadeOut,
+    FadeIn,
+}
+var game_state = GameState.Playing;
 
-// these are set by loadLevel()
+type Coord = {x:number, y:number};
+type Vector = {tile:number, direction:number};
+
 class Level {
   tiles_per_row: number;
   tiles_per_column: number;
@@ -29,20 +36,91 @@ class Level {
     }
   }
 
-  tileIndex(x: number, y: number): number {
+  getTileFromCoord(x: number, y: number): number {
     return y * this.tiles_per_row + x;
+  }
+
+  getTileCoords(location: number): Coord {
+    const x = location % this.tiles_per_row;
+    const y = (location - x) / this.tiles_per_row;
+    return {x, y};
+  }
+
+  allLocations(): number[] {
+    var result: number[] = [];
+    for (var i = 0; i < this.tiles.length; i++) {
+      result.push(i);
+    }
+    return result;
+  }
+  clickableLocations(): number[] {
+    var result: number[] = [];
+    for (var y = 0; y < level.tiles_per_column - 1; y++) {
+      for (var x = 0; x < level.tiles_per_row - 1; x++) {
+        result.push(this.getTileFromCoord(x, y));
+      }
+    }
+    return result;
+  }
+
+  allEdges(): Vector[] {
+    // TODO: we don't actually care about *all* of the edges.
+    let result: Vector[] = [];
+    for (let y = 0; y < this.tiles_per_column - 1; y++) {
+      for (let x = 0; x < this.tiles_per_row - 1; x++) {
+        result.push({tile:this.getTileFromCoord(x, y), direction:1});
+        result.push({tile:this.getTileFromCoord(x, y), direction:2});
+      }
+    }
+    return result;
+  }
+
+  getTileFromDirection(tile: number, direction: number): number {
+    switch (direction) {
+      case 1:
+        // right
+        return tile + 1;
+      case 2:
+        // down
+        return tile + this.tiles_per_row;
+      case 4:
+        // left
+        return tile - 1;
+      case 8:
+        // up
+        return tile - this.tiles_per_row;
+    }
+    throw new AssertionFailure();
+  }
+
+  getEdgeValue(tile: number, direction: number): number {
+    return +!!(this.tiles[tile] & direction);
+  }
+
+  reverseDirection(direction: number): number {
+    return 0xf & (
+      (direction << 2) |
+      (direction >> 2)
+    );
+  }
+
+  rotateTile(tile: number): boolean {
+    const {x, y} = this.getTileCoords(tile);
+    if (x <= 0 || x >= this.tiles_per_row - 1 ||
+        y <= 0 || y >= this.tiles_per_column - 1) {
+      // out of bounds
+      return false;
+    }
+    let tile_value = this.tiles[tile];
+    tile_value = 0xf & ((tile_value << 1) | (tile_value >> 3));
+    this.tiles[tile] = tile_value;
+    return true;
   }
 }
 
+var level_number = 0;
+// this is set by loadLevel()
 var level = new Level(1, 1);
-
-enum GameState {
-    Playing,
-    FadeOut,
-    FadeIn,
-}
-var game_state = GameState.Playing;
-
 function loadLevel(new_level: Level) {
   level = new_level;
   handleResize();
@@ -57,7 +135,8 @@ canvas.addEventListener("mousedown", function(event: MouseEvent) {
   if (game_state !== GameState.Playing) return;
   const tile_x = Math.floor((event.x - origin_x) / scale);
   const tile_y = Math.floor((event.y - origin_y) / scale);
-  rotateTile(tile_x, tile_y);
+  const tile = level.getTileFromCoord(tile_x, tile_y);
+  rotateTile(tile);
 });
 
 // these are calculated below
@@ -95,15 +174,14 @@ function renderEverything() {
   context.fillStyle = "#000";
   context.lineWidth = scale * 0.1;
   context.lineCap = "round";
-  for (var y = 0; y < level.tiles_per_column; y++) {
-    for (var x = 0; x < level.tiles_per_row; x++) {
-      const tile = level.tiles[level.tileIndex(x, y)];
-      context.save();
-      try {
-        renderTile(tile, x, y);
-      } finally {
-        context.restore();
-      }
+  for (let location of level.allLocations()) {
+    const {x, y} = level.getTileCoords(location);
+    const tile = level.tiles[location];
+    context.save();
+    try {
+      renderTile(tile, x, y);
+    } finally {
+      context.restore();
     }
   }
 
@@ -185,31 +263,19 @@ function renderEverything() {
   }
 }
 
-function rotateTile(x: number, y: number) {
-  if (x <= 0 || x >= level.tiles_per_row - 1 ||
-      y <= 0 || y >= level.tiles_per_column - 1) {
-    // out of bounds
-    return;
-  }
-  const index = level.tileIndex(x, y);
-  var tile = level.tiles[index];
-  tile = 0xf & ((tile << 1) | (tile >> 3));
-  level.tiles[index] = tile;
+function rotateTile(tile: number) {
+  if (!level.rotateTile(tile)) return;
+
   renderEverything();
 
   checkForDone();
 }
 
 function checkForDone() {
-  // the border tiles don't rotate, so they're always solved.
-  for (var y = 0; y < level.tiles_per_column - 1; y++) {
-    for (var x = 0; x < level.tiles_per_row - 1; x++) {
-      const tile = level.tiles[level.tileIndex(x, y)];
-      const right_tile = level.tiles[level.tileIndex(x + 1, y)];
-      const down_tile = level.tiles[level.tileIndex(x, y + 1)];
-      if (!!(tile & 1) !== !!(right_tile & 4)) return;
-      if (!!(tile & 2) !== !!(down_tile & 8)) return;
-    }
+  for (let {tile, direction} of level.allEdges()) {
+    const a = level.getEdgeValue(tile, direction);
+    const b = level.getEdgeValue(level.getTileFromDirection(tile, direction), level.reverseDirection(direction));
+    if (a !== b) return;
   }
   // everything is done
   beginLevelTransition();
@@ -282,13 +348,13 @@ function generateLevel(tiles_per_row: number, tiles_per_column: number): Level {
     for (var x = 1; x < tiles_per_row - 1; x++) {
       if (x < tiles_per_row - 2 && Math.random() < 0.5) {
         // connect right
-        level.tiles[level.tileIndex(x, y)] |= 1;
-        level.tiles[level.tileIndex(x + 1, y)] |= 4;
+        level.tiles[level.getTileFromCoord(x, y)] |= 1;
+        level.tiles[level.getTileFromCoord(x + 1, y)] |= 4;
       }
       if (y < tiles_per_column - 2 && Math.random() < 0.5) {
         // connect down
-        level.tiles[level.tileIndex(x, y)] |= 2;
-        level.tiles[level.tileIndex(x, y + 1)] |= 8;
+        level.tiles[level.getTileFromCoord(x, y)] |= 2;
+        level.tiles[level.getTileFromCoord(x, y + 1)] |= 8;
       }
     }
   }
