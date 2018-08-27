@@ -9,7 +9,7 @@ enum GameState {
     FadeOut,
     FadeIn,
 }
-var game_state = GameState.Playing;
+let game_state = GameState.Playing;
 
 type Coord = {x:number, y:number};
 type Vector = {tile:number, direction:number};
@@ -30,7 +30,7 @@ class Level {
       this.tiles = tiles;
     } else {
       this.tiles = [];
-      for (var i = 0; i < tiles_per_row * tiles_per_column; i++) {
+      for (let i = 0; i < tiles_per_row * tiles_per_column; i++) {
         this.tiles.push(0);
       }
     }
@@ -47,16 +47,16 @@ class Level {
   }
 
   allLocations(): number[] {
-    var result: number[] = [];
-    for (var i = 0; i < this.tiles.length; i++) {
+    let result: number[] = [];
+    for (let i = 0; i < this.tiles.length; i++) {
       result.push(i);
     }
     return result;
   }
   clickableLocations(): number[] {
-    var result: number[] = [];
-    for (var y = 0; y < level.tiles_per_column - 1; y++) {
-      for (var x = 0; x < level.tiles_per_row - 1; x++) {
+    let result: number[] = [];
+    for (let y = 0; y < level.tiles_per_column - 1; y++) {
+      for (let x = 0; x < level.tiles_per_row - 1; x++) {
         result.push(this.getTileFromCoord(x, y));
       }
     }
@@ -118,9 +118,9 @@ class Level {
   }
 }
 
-var level_number = 0;
+let level_number = 0;
 // this is set by loadLevel()
-var level = new Level(1, 1);
+let level = new Level(1, 1);
 function loadLevel(new_level: Level) {
   level = new_level;
   handleResize();
@@ -140,9 +140,9 @@ canvas.addEventListener("mousedown", function(event: MouseEvent) {
 });
 
 // these are calculated below
-var scale = 100;
-var origin_x = -50;
-var origin_y = -50;
+let scale = 100;
+let origin_x = -50;
+let origin_y = -50;
 function handleResize() {
   canvas.width = document.documentElement.clientWidth;
   canvas.height = document.documentElement.clientHeight - footer.clientHeight;
@@ -280,7 +280,7 @@ function checkForDone() {
   // everything is done
   beginLevelTransition();
 }
-var global_alpha = 1.0;
+let global_alpha = 1.0;
 function beginLevelTransition() {
   game_state = GameState.FadeOut;
   const start_time = new Date().getTime();
@@ -391,12 +391,12 @@ function generateLevel(tiles_per_row: number, tiles_per_column: number): Level {
   }
 
   // rotate the tiles randomly
-  for (var y = 1; y < tiles_per_column - 1; y++) {
-    for (var x = 1; x < tiles_per_row - 1; x++) {
+  for (let y = 1; y < tiles_per_column - 1; y++) {
+    for (let x = 1; x < tiles_per_row - 1; x++) {
       const rotations = Math.floor(Math.random() * 4);
       if (rotations === 0) continue;
       const index = y * tiles_per_row + x;
-      var tile = level.tiles[index];
+      let tile = level.tiles[index];
       tile = 0xf & ((tile << rotations) | (tile >> (4 - rotations)));
       level.tiles[index] = tile;
     }
