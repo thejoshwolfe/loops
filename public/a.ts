@@ -5,9 +5,9 @@ const buffer_canvas = document.createElement("canvas");
 const pi = Math.PI;
 
 enum GameState {
-    Playing,
-    FadeOut,
-    FadeIn,
+  Playing,
+  FadeOut,
+  FadeIn,
 }
 let game_state = GameState.Playing;
 
@@ -64,13 +64,24 @@ class Level {
   }
 
   allEdges(): Vector[] {
-    // TODO: we don't actually care about *all* of the edges.
+    // possible optimization: we don't actually care about *all* of the edges.
     let result: Vector[] = [];
     for (let y = 0; y < this.tiles_per_column - 1; y++) {
       for (let x = 0; x < this.tiles_per_row - 1; x++) {
         result.push({tile:this.getTileFromCoord(x, y), direction:1});
         result.push({tile:this.getTileFromCoord(x, y), direction:2});
       }
+    }
+    return result;
+  }
+
+  countUnsolved(): number {
+    // possible optimization: cache this result
+    let result = 0;
+    for (let {tile, direction} of this.allEdges()) {
+      const a = this.getEdgeValue(tile, direction);
+      const b = this.getEdgeValue(this.getTileFromDirection(tile, direction), this.reverseDirection(direction));
+      if (a !== b) result += 1;
     }
     return result;
   }
@@ -141,6 +152,7 @@ canvas.addEventListener("mousedown", function(event: MouseEvent) {
 
 // these are calculated below
 let scale = 100;
+// the origin is the upper-left corner of the upper-left-corner border tile.
 let origin_x = -50;
 let origin_y = -50;
 function handleResize() {
@@ -167,32 +179,54 @@ function handleResize() {
 }
 
 function renderEverything() {
-  const context = buffer_canvas.getContext("2d")!;
+  const use_buffer = game_state !== GameState.Playing;
+  const context = (use_buffer ? buffer_canvas : canvas).getContext("2d")!;
   context.fillStyle = "#fff";
-  context.fillRect(0, 0, buffer_canvas.width, buffer_canvas.height);
+  context.fillRect(0, 0, canvas.width, canvas.height);
 
-  context.fillStyle = "#000";
+  // grid lines
+  const unsolved_count = level.countUnsolved();
+  if (level_number >= 4 && unsolved_count > 4) {
+    const color = Math.max(0xdd, 0xff - unsolved_count + 4).toString(16);
+    context.strokeStyle = "#" + color + color + color;
+    context.lineWidth = 3;
+    context.lineCap = "round";
+    context.beginPath();
+    for (let x = 2; x < level.tiles_per_row - 1; x++) {
+      context.moveTo(origin_x + x * scale, origin_y + 1 * scale);
+      context.lineTo(origin_x + x * scale, origin_y + (level.tiles_per_column - 1) * scale);
+    }
+    for (let y = 2; y < level.tiles_per_column - 1; y++) {
+      context.moveTo(origin_x + 1 * scale, origin_y + y * scale);
+      context.lineTo(origin_x + (level.tiles_per_row - 1) * scale, origin_y + y * scale);
+    }
+    context.stroke();
+  }
+
+  context.strokeStyle = "#000";
   context.lineWidth = scale * 0.1;
   context.lineCap = "round";
   for (let location of level.allLocations()) {
     const {x, y} = level.getTileCoords(location);
-    const tile = level.tiles[location];
+    const tile_value = level.tiles[location];
     context.save();
     try {
-      renderTile(tile, x, y);
+      renderTile(tile_value, x, y);
     } finally {
       context.restore();
     }
   }
 
   // render the game into the real canvas with the alpha blend
-  const real_context = canvas.getContext("2d")!;
-  real_context.fillStyle = "#fff";
-  real_context.fillRect(0, 0, canvas.width, canvas.height);
-  real_context.save();
-  real_context.globalAlpha = global_alpha;
-  real_context.drawImage(buffer_canvas, 0, 0);
-  real_context.restore();
+  if (use_buffer) {
+    const real_context = canvas.getContext("2d")!;
+    real_context.fillStyle = "#fff";
+    real_context.fillRect(0, 0, canvas.width, canvas.height);
+    real_context.save();
+    real_context.globalAlpha = global_alpha;
+    real_context.drawImage(buffer_canvas, 0, 0);
+    real_context.restore();
+  }
 
   function renderTile(tile: number, x: number, y: number) {
     context.translate(origin_x + scale*(x + 0.5), origin_y + scale*(y + 0.5));
@@ -272,13 +306,11 @@ function rotateTile(tile: number) {
 }
 
 function checkForDone() {
-  for (let {tile, direction} of level.allEdges()) {
-    const a = level.getEdgeValue(tile, direction);
-    const b = level.getEdgeValue(level.getTileFromDirection(tile, direction), level.reverseDirection(direction));
-    if (a !== b) return;
+  const unsolved_count = level.countUnsolved();
+  if (unsolved_count === 0) {
+    // everything is done
+    beginLevelTransition();
   }
-  // everything is done
-  beginLevelTransition();
 }
 let global_alpha = 1.0;
 function beginLevelTransition() {
@@ -396,9 +428,9 @@ function generateLevel(tiles_per_row: number, tiles_per_column: number): Level {
       const rotations = Math.floor(Math.random() * 4);
       if (rotations === 0) continue;
       const index = y * tiles_per_row + x;
-      let tile = level.tiles[index];
-      tile = 0xf & ((tile << rotations) | (tile >> (4 - rotations)));
-      level.tiles[index] = tile;
+      let tile_value = level.tiles[index];
+      tile_value = 0xf & ((tile_value << rotations) | (tile_value >> (4 - rotations)));
+      level.tiles[index] = tile_value;
     }
   }
   return level;
