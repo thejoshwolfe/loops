@@ -13,6 +13,7 @@ let game_state = GameState.Playing;
 
 type Coord = {x:number, y:number};
 type Vector = {tile:number, direction:number};
+
 abstract class Level {
   tiles_per_row: number;
   tiles_per_column: number;
@@ -122,7 +123,7 @@ class SquareLevel extends Level {
       return false;
     }
     let tile_value = this.tiles[tile];
-    tile_value = 0x3f & ((tile_value << 1) | (tile_value >> 5));
+    tile_value = 0xf & ((tile_value << 1) | (tile_value >> 3));
     this.tiles[tile] = tile_value;
     return true;
   }
@@ -234,14 +235,13 @@ class HexagonLevel extends Level {
       return false;
     }
     let tile_value = this.tiles[tile];
-    tile_value = 0xf & ((tile_value << 1) | (tile_value >> 3));
+    tile_value = 0x3f & ((tile_value << 1) | (tile_value >> 5));
     this.tiles[tile] = tile_value;
     return true;
   }
 }
 
 let level_number = 0;
-// this is set by loadLevel()
 let level: Level;
 function loadLevel(new_level: Level) {
   level = new_level;
@@ -408,10 +408,38 @@ function renderEverything() {
   }
 }
 
+const cheatcode_sequence = [
+  // sonata of awakening
+  6, 5, 6, 5, 9, 10, 9,
+];
+let cheatcode_index = 0;
 function rotateTile(tile: number) {
   if (!level.rotateTile(tile)) return;
 
   renderEverything();
+
+  if (cheatcode_index !== -1) {
+    if (cheatcode_sequence[cheatcode_index] === tile) {
+      cheatcode_index++;
+      if (cheatcode_index === cheatcode_sequence.length) {
+        // success
+        cheatcode_index = -1;
+        setTimeout(function() {
+          level_number = parseInt("" + prompt("level select"), 10);
+          if (!(0 <= level_number && level_number < 100)) {
+            // malformed input
+            level_number = 0;
+          }
+          loadNewLevel();
+        }, 0);
+        return;
+      }
+    } else {
+      // nope
+      cheatcode_index = -1;
+    }
+    console.log(cheatcode_index);
+  }
 
   checkForDone();
 }
