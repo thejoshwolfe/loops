@@ -13,14 +13,9 @@ let game_state = GameState.Playing;
 
 type Coord = {x:number, y:number};
 type Vector = {tile:number, direction:number};
-
-class Level {
+abstract class Level {
   tiles_per_row: number;
   tiles_per_column: number;
-  // a tile is a bitfield:
-  //   8
-  // 4   1
-  //   2
   tiles: number[];
   constructor(tiles_per_row: number, tiles_per_column: number, tiles?: number[]) {
     this.tiles_per_row = tiles_per_row;
@@ -35,6 +30,35 @@ class Level {
       }
     }
   }
+
+  abstract getTileFromCoord(x: number, y: number): number;
+  abstract getTileCoords(location: number): Coord;
+  abstract allLocations(): number[];
+  abstract allEdges(): Vector[];
+  abstract getTileFromDirection(tile: number, direction: number): number;
+  abstract reverseDirection(direction: number): number;
+  abstract rotateTile(tile: number): boolean;
+
+  countUnsolved(): number {
+    // possible optimization: cache this result
+    let result = 0;
+    for (let {tile, direction} of this.allEdges()) {
+      const a = this.getEdgeValue(tile, direction);
+      const b = this.getEdgeValue(this.getTileFromDirection(tile, direction), this.reverseDirection(direction));
+      if (a !== b) result += 1;
+    }
+    return result;
+  }
+  getEdgeValue(tile: number, direction: number): number {
+    return +!!(this.tiles[tile] & direction);
+  }
+}
+
+class SquareLevel extends Level {
+  // tile values are bitfields:
+  //   8
+  // 4   1
+  //   2
 
   getTileFromCoord(x: number, y: number): number {
     return y * this.tiles_per_row + x;
@@ -53,16 +77,6 @@ class Level {
     }
     return result;
   }
-  clickableLocations(): number[] {
-    let result: number[] = [];
-    for (let y = 0; y < level.tiles_per_column - 1; y++) {
-      for (let x = 0; x < level.tiles_per_row - 1; x++) {
-        result.push(this.getTileFromCoord(x, y));
-      }
-    }
-    return result;
-  }
-
   allEdges(): Vector[] {
     // possible optimization: we don't actually care about *all* of the edges.
     let result: Vector[] = [];
@@ -71,17 +85,6 @@ class Level {
         result.push({tile:this.getTileFromCoord(x, y), direction:1});
         result.push({tile:this.getTileFromCoord(x, y), direction:2});
       }
-    }
-    return result;
-  }
-
-  countUnsolved(): number {
-    // possible optimization: cache this result
-    let result = 0;
-    for (let {tile, direction} of this.allEdges()) {
-      const a = this.getEdgeValue(tile, direction);
-      const b = this.getEdgeValue(this.getTileFromDirection(tile, direction), this.reverseDirection(direction));
-      if (a !== b) result += 1;
     }
     return result;
   }
@@ -104,14 +107,122 @@ class Level {
     throw new AssertionFailure();
   }
 
-  getEdgeValue(tile: number, direction: number): number {
-    return +!!(this.tiles[tile] & direction);
-  }
-
   reverseDirection(direction: number): number {
     return 0xf & (
       (direction << 2) |
       (direction >> 2)
+    );
+  }
+
+  rotateTile(tile: number): boolean {
+    const {x, y} = this.getTileCoords(tile);
+    if (x <= 0 || x >= this.tiles_per_row - 1 ||
+        y <= 0 || y >= this.tiles_per_column - 1) {
+      // out of bounds
+      return false;
+    }
+    let tile_value = this.tiles[tile];
+    tile_value = 0x3f & ((tile_value << 1) | (tile_value >> 5));
+    this.tiles[tile] = tile_value;
+    return true;
+  }
+}
+
+class HexagonLevel extends Level {
+  // tile values are bitfields:
+  //    16
+  // 08    32
+  // 04    01
+  //    02
+  // odd columns are offset down
+  // 0       2       4
+  //     1       3       5
+  // 6       8       a
+  //     7       9       b
+  // c       e       g
+  //     d       f       h
+  // with and odd tiles_per_column:
+  // 0       2       4
+  //     1       3
+  // 5       7       9
+  //     6       8
+  // a       c       e
+  //     b       d
+
+  getTileFromCoord(x: number, y: number): number {
+    return y * this.tiles_per_row + x;
+  }
+
+  getTileCoords(location: number): Coord {
+    const x = location % this.tiles_per_row;
+    const y = (location - x) / this.tiles_per_row;
+    return {x, y};
+  }
+
+  allLocations(): number[] {
+    let result: number[] = [];
+    for (let i = 0; i < this.tiles.length; i++) {
+      result.push(i);
+    }
+    return result;
+  }
+  allEdges(): Vector[] {
+    let result: Vector[] = [];
+    for (let y = 0; y < this.tiles_per_column - 1; y++) {
+      for (let x = 0; x < this.tiles_per_row; x++) {
+        let tile = this.getTileFromCoord(x, y);
+        if (x < this.tiles_per_row - 1) {
+          result.push({tile, direction:1});
+        }
+        result.push({tile, direction:2});
+        if (x > 0) {
+          result.push({tile, direction:4});
+        }
+      }
+    }
+    // for the last row, only even columns have diagonal-downward edges.
+    for (let x = 0; x < this.tiles_per_row; x += 2) {
+      let tile = this.getTileFromCoord(x, this.tiles_per_column - 1);
+      if (x < this.tiles_per_row - 1) {
+        result.push({tile, direction:1});
+      }
+      if (x > 0) {
+        result.push({tile, direction:4});
+      }
+    }
+    return result;
+  }
+
+  getTileFromDirection(tile: number, direction: number): number {
+    let {x, y} = this.getTileCoords(tile);
+    const is_offset_down = !!(x & 1);
+    switch (direction) {
+      case 1:
+        // down right
+        return this.getTileFromCoord(x + 1, is_offset_down ? y + 1 : y);
+      case 2:
+        // down
+        return this.getTileFromCoord(x, y + 1);
+      case 4:
+        // down left
+        return this.getTileFromCoord(x - 1, is_offset_down ? y + 1 : y);
+      case 8:
+        // up left
+        return this.getTileFromCoord(x - 1, is_offset_down ? y : y - 1);
+      case 16:
+        // up
+        return this.getTileFromCoord(x, y - 1);
+      case 32:
+        // up right
+        return this.getTileFromCoord(x + 1, is_offset_down ? y : y - 1);
+    }
+    throw new AssertionFailure();
+  }
+
+  reverseDirection(direction: number): number {
+    return 0x3f & (
+      (direction << 3) |
+      (direction >> 3)
     );
   }
 
@@ -131,7 +242,7 @@ class Level {
 
 let level_number = 0;
 // this is set by loadLevel()
-let level = new Level(1, 1);
+let level: Level;
 function loadLevel(new_level: Level) {
   level = new_level;
   handleResize();
@@ -346,21 +457,21 @@ function loadNewLevel() {
 function getLevelNumber(level_number: number) {
   switch (level_number) {
     case 1:
-      return new Level(4, 4, [
+      return new SquareLevel(4, 4, [
         0, 0, 0, 0,
         0, 6, 1, 0,
         0, 6, 2, 0,
         0, 0, 0, 0,
       ]);
     case 2:
-      return new Level(5, 4, [
+      return new SquareLevel(5, 4, [
         0, 0, 0, 0, 0,
         0, 6,14,12, 0,
         0, 3, 9, 4, 0,
         0, 0, 0, 0, 0,
       ]);
     case 3:
-      return new Level(5, 5, [
+      return new SquareLevel(5, 5, [
         0, 0, 0, 0, 0,
         0, 2, 3, 4, 0,
         0, 2, 1, 5, 0,
@@ -373,7 +484,7 @@ function getLevelNumber(level_number: number) {
 }
 
 function generateLevel(tiles_per_row: number, tiles_per_column: number): Level {
-  const level = new Level(tiles_per_row, tiles_per_column);
+  const level = new SquareLevel(tiles_per_row, tiles_per_column);
 
   // generate a solved puzzle
   for (var y = 1; y < tiles_per_column - 1; y++) {
