@@ -39,6 +39,8 @@ abstract class Level {
   abstract getTileFromDirection(tile: number, direction: number): number;
   abstract reverseDirection(direction: number): number;
   abstract rotateTile(tile: number): boolean;
+  abstract renderGridLines(context: CanvasRenderingContext2D): void;
+  abstract renderTile(context: CanvasRenderingContext2D, tile: number, x: number, y: number): void;
 
   countUnsolved(): number {
     // possible optimization: cache this result
@@ -52,6 +54,35 @@ abstract class Level {
   }
   getEdgeValue(tile: number, direction: number): number {
     return +!!(this.tiles[tile] & direction);
+  }
+
+  renderLevel(context: CanvasRenderingContext2D) {
+    // grid lines
+    const unsolved_count = level_number < 5 ? 999 : this.countUnsolved();
+    if (unsolved_count > 4) {
+      const color = Math.max(0xdd, 0xff - unsolved_count + 4).toString(16);
+      context.strokeStyle = "#" + color + color + color;
+      context.lineWidth = 0.03;
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.beginPath();
+      this.renderGridLines(context);
+      context.stroke();
+    }
+
+    context.strokeStyle = "#000";
+    context.lineWidth = 0.1;
+    context.lineCap = "round";
+    for (let location of this.allLocations()) {
+      const {x, y} = this.getTileCoords(location);
+      const tile_value = this.tiles[location];
+      context.save();
+      try {
+        this.renderTile(context, tile_value, x, y);
+      } finally {
+        context.restore();
+      }
+    }
   }
 }
 
@@ -126,6 +157,86 @@ class SquareLevel extends Level {
     tile_value = 0xf & ((tile_value << 1) | (tile_value >> 3));
     this.tiles[tile] = tile_value;
     return true;
+  }
+
+  renderGridLines(context: CanvasRenderingContext2D) {
+    // straight shots in both directions
+    for (let x = 2; x < this.tiles_per_row - 1; x++) {
+      context.moveTo(x, 1);
+      context.lineTo(x, this.tiles_per_column - 1);
+    }
+    for (let y = 2; y < this.tiles_per_column - 1; y++) {
+      context.moveTo(1, y);
+      context.lineTo(this.tiles_per_row - 1, y);
+    }
+  }
+
+  renderTile(context: CanvasRenderingContext2D, tile: number, x: number, y: number) {
+    context.translate(x + 0.5, y + 0.5);
+    // normalize rotation
+    switch (tile) {
+      case 0: return;
+      case 1: break;
+      case 2: tile = 1; context.rotate(pi/2); break;
+      case 3: break;
+      case 4: tile = 1; context.rotate(pi); break;
+      case 5: break;
+      case 6: tile = 3; context.rotate(pi/2); break;
+      case 7: break;
+      case 8: tile = 1; context.rotate(pi*1.5); break;
+      case 9: tile = 3; context.rotate(pi*1.5); break;
+      case 10: tile = 5; context.rotate(pi/2); break;
+      case 11: tile = 7; context.rotate(pi*1.5); break;
+      case 12: tile = 3; context.rotate(pi); break;
+      case 13: tile = 7; context.rotate(pi); break;
+      case 14: tile = 7; context.rotate(pi/2); break;
+      case 15: break;
+      default: throw new AssertionFailure();
+    }
+
+    switch (tile) {
+      case 1:
+        context.beginPath();
+        context.arc(0, 0, 0.25, 0, 2*pi);
+        context.lineTo(0.5, 0);
+        context.stroke();
+        break;
+      case 3:
+        context.beginPath();
+        context.arc(0.5, 0.5, 0.5, pi, pi*1.5);
+        context.stroke();
+        break;
+      case 5:
+        context.beginPath();
+        context.moveTo(0.5, 0);
+        context.lineTo(-0.5, 0);
+        context.stroke();
+        break;
+      case 7:
+        context.beginPath();
+        context.arc(-0.5, 0.5, 0.5, pi*1.5, 2*pi);
+        context.stroke();
+        context.beginPath();
+        context.arc(0.5, 0.5, 0.5, pi, pi*1.5);
+        context.stroke();
+        break;
+      case 15:
+        context.beginPath();
+        context.arc(0.5, 0.5, 0.5, pi, pi*1.5);
+        context.stroke();
+        context.beginPath();
+        context.arc(0.5, -0.5, 0.5, pi/2, pi);
+        context.stroke();
+        context.beginPath();
+        context.arc(-0.5, -0.5, 0.5, 0, pi/2);
+        context.stroke();
+        context.beginPath();
+        context.arc(-0.5, 0.5, 0.5, pi*1.5, 2*pi);
+        context.stroke();
+        break;
+      default:
+        throw new AssertionFailure();
+    }
   }
 }
 
@@ -239,6 +350,33 @@ class HexagonLevel extends Level {
     this.tiles[tile] = tile_value;
     return true;
   }
+
+  renderLevel(context: CanvasRenderingContext2D) {
+    void context;
+    throw new AssertionFailure();
+  }
+
+  renderGridLines(context: CanvasRenderingContext2D) {
+    // horizontal squiggles
+    for (let y = 2; y < this.tiles_per_column - 1; y++) {
+      for (let x = 1; x < this.tiles_per_row - 1; x += 2) {
+        context.moveTo(1, y);
+        context.lineTo(this.tiles_per_row - 1, y);
+      }
+    }
+    for (let x = 2; x < this.tiles_per_row - 1; x++) {
+      context.moveTo(x, 1);
+      context.lineTo(x, this.tiles_per_column - 1);
+    }
+  }
+
+  renderTile(context: CanvasRenderingContext2D, tile: number, x: number, y: number) {
+    void context;
+    void tile;
+    void x;
+    void y;
+    // TODO
+  }
 }
 
 let level_number = 0;
@@ -299,39 +437,8 @@ function renderEverything() {
   try {
     context.translate(origin_x, origin_y);
     context.scale(scale, scale);
+    level.renderLevel(context);
 
-    // grid lines
-    const unsolved_count = level.countUnsolved();
-    if (level_number >= 4 && unsolved_count > 4) {
-      const color = Math.max(0xdd, 0xff - unsolved_count + 4).toString(16);
-      context.strokeStyle = "#" + color + color + color;
-      context.lineWidth = 3 / scale;
-      context.lineCap = "round";
-      context.beginPath();
-      for (let x = 2; x < level.tiles_per_row - 1; x++) {
-        context.moveTo(x, 1);
-        context.lineTo(x, level.tiles_per_column - 1);
-      }
-      for (let y = 2; y < level.tiles_per_column - 1; y++) {
-        context.moveTo(1, y);
-        context.lineTo(level.tiles_per_row - 1, y);
-      }
-      context.stroke();
-    }
-
-    context.strokeStyle = "#000";
-    context.lineWidth = 0.1;
-    context.lineCap = "round";
-    for (let location of level.allLocations()) {
-      const {x, y} = level.getTileCoords(location);
-      const tile_value = level.tiles[location];
-      context.save();
-      try {
-        renderTile(tile_value, x, y);
-      } finally {
-        context.restore();
-      }
-    }
   } finally {
     context.restore();
   }
@@ -345,74 +452,6 @@ function renderEverything() {
     real_context.globalAlpha = global_alpha;
     real_context.drawImage(buffer_canvas, 0, 0);
     real_context.restore();
-  }
-
-  function renderTile(tile: number, x: number, y: number) {
-    context.translate(x + 0.5, y + 0.5);
-    // normalize rotation
-    switch (tile) {
-      case 0: return;
-      case 1: break;
-      case 2: tile = 1; context.rotate(pi/2); break;
-      case 3: break;
-      case 4: tile = 1; context.rotate(pi); break;
-      case 5: break;
-      case 6: tile = 3; context.rotate(pi/2); break;
-      case 7: break;
-      case 8: tile = 1; context.rotate(pi*1.5); break;
-      case 9: tile = 3; context.rotate(pi*1.5); break;
-      case 10: tile = 5; context.rotate(pi/2); break;
-      case 11: tile = 7; context.rotate(pi*1.5); break;
-      case 12: tile = 3; context.rotate(pi); break;
-      case 13: tile = 7; context.rotate(pi); break;
-      case 14: tile = 7; context.rotate(pi/2); break;
-      case 15: break;
-      default: throw new AssertionFailure();
-    }
-
-    switch (tile) {
-      case 1:
-        context.beginPath();
-        context.arc(0, 0, 0.25, 0, 2*pi);
-        context.lineTo(0.5, 0);
-        context.stroke();
-        break;
-      case 3:
-        context.beginPath();
-        context.arc(0.5, 0.5, 0.5, pi, pi*1.5);
-        context.stroke();
-        break;
-      case 5:
-        context.beginPath();
-        context.moveTo(0.5, 0);
-        context.lineTo(-0.5, 0);
-        context.stroke();
-        break;
-      case 7:
-        context.beginPath();
-        context.arc(-0.5, 0.5, 0.5, pi*1.5, 2*pi);
-        context.stroke();
-        context.beginPath();
-        context.arc(0.5, 0.5, 0.5, pi, pi*1.5);
-        context.stroke();
-        break;
-      case 15:
-        context.beginPath();
-        context.arc(0.5, 0.5, 0.5, pi, pi*1.5);
-        context.stroke();
-        context.beginPath();
-        context.arc(0.5, -0.5, 0.5, pi/2, pi);
-        context.stroke();
-        context.beginPath();
-        context.arc(-0.5, -0.5, 0.5, 0, pi/2);
-        context.stroke();
-        context.beginPath();
-        context.arc(-0.5, 0.5, 0.5, pi*1.5, 2*pi);
-        context.stroke();
-        break;
-      default:
-        throw new AssertionFailure();
-    }
   }
 }
 
@@ -446,7 +485,6 @@ function rotateTile(tile: number) {
       // nope
       cheatcode_index = -1;
     }
-    console.log(cheatcode_index);
   }
 
   checkForDone();
