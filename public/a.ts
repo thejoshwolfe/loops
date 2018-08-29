@@ -3,6 +3,7 @@ const footer = document.getElementById("footer")!;
 const buffer_canvas = document.createElement("canvas");
 
 const pi = Math.PI;
+const sqrt3 = Math.sqrt(3);
 
 enum GameState {
   Playing,
@@ -32,15 +33,27 @@ abstract class Level {
     }
   }
 
+  abstract getScaleX(): number;
+  abstract getScaleY(): number;
+
   abstract getTileFromCoord(x: number, y: number): number;
   abstract getTileCoords(location: number): Coord;
-  abstract allLocations(): number[];
+  abstract allTiles(): number[];
   abstract allEdges(): Vector[];
   abstract getTileFromDirection(tile: number, direction: number): number;
   abstract reverseDirection(direction: number): number;
   abstract rotateTile(tile: number): boolean;
+  abstract rotateRandomly(tile: number): void;
   abstract renderGridLines(context: CanvasRenderingContext2D): void;
-  abstract renderTile(context: CanvasRenderingContext2D, tile: number, x: number, y: number): void;
+  abstract renderTile(context: CanvasRenderingContext2D, tile_value: number, x: number, y: number): void;
+
+  isInBounds(tile: number): boolean {
+    const {x, y} = this.getTileCoords(tile);
+    return (
+      1 <= x && x < this.tiles_per_row - 1 &&
+      1 <= y && y < this.tiles_per_column - 1
+    );
+  }
 
   countUnsolved(): number {
     // possible optimization: cache this result
@@ -58,7 +71,8 @@ abstract class Level {
 
   renderLevel(context: CanvasRenderingContext2D) {
     // grid lines
-    const unsolved_count = level_number < 5 ? 999 : this.countUnsolved();
+    //const unsolved_count = level_number < 5 ? 999 : this.countUnsolved();
+    const unsolved_count = 999; // TODO
     if (unsolved_count > 4) {
       const color = Math.max(0xdd, 0xff - unsolved_count + 4).toString(16);
       context.strokeStyle = "#" + color + color + color;
@@ -73,24 +87,23 @@ abstract class Level {
     context.strokeStyle = "#000";
     context.lineWidth = 0.1;
     context.lineCap = "round";
-    for (let location of this.allLocations()) {
+    for (let location of this.allTiles()) {
       const {x, y} = this.getTileCoords(location);
       const tile_value = this.tiles[location];
-      context.save();
-      try {
-        this.renderTile(context, tile_value, x, y);
-      } finally {
-        context.restore();
-      }
+      this.renderTile(context, tile_value, x, y);
     }
   }
 }
 
 class SquareLevel extends Level {
-  // tile values are bitfields:
+  // tile values are a bit for each edge:
   //   8
   // 4   1
   //   2
+  // the length of each edge is 1 unit.
+
+  getScaleX() { return 1; }
+  getScaleY() { return 1; }
 
   getTileFromCoord(x: number, y: number): number {
     return y * this.tiles_per_row + x;
@@ -102,7 +115,7 @@ class SquareLevel extends Level {
     return {x, y};
   }
 
-  allLocations(): number[] {
+  allTiles(): number[] {
     let result: number[] = [];
     for (let i = 0; i < this.tiles.length; i++) {
       result.push(i);
@@ -147,16 +160,20 @@ class SquareLevel extends Level {
   }
 
   rotateTile(tile: number): boolean {
-    const {x, y} = this.getTileCoords(tile);
-    if (x <= 0 || x >= this.tiles_per_row - 1 ||
-        y <= 0 || y >= this.tiles_per_column - 1) {
-      // out of bounds
-      return false;
-    }
+    if (!this.isInBounds(tile)) return false;
     let tile_value = this.tiles[tile];
     tile_value = 0xf & ((tile_value << 1) | (tile_value >> 3));
     this.tiles[tile] = tile_value;
     return true;
+  }
+
+  rotateRandomly(tile: number) {
+    let tile_value = this.tiles[tile];
+    if (tile_value === 0 || tile_value === 0xf) return;
+    const rotations = Math.floor(Math.random() * 4);
+    if (rotations === 0) return;
+    tile_value = 0xf & ((tile_value << rotations) | (tile_value >> (4 - rotations)));
+    this.tiles[tile] = tile_value;
   }
 
   renderGridLines(context: CanvasRenderingContext2D) {
@@ -171,95 +188,102 @@ class SquareLevel extends Level {
     }
   }
 
-  renderTile(context: CanvasRenderingContext2D, tile: number, x: number, y: number) {
-    context.translate(x + 0.5, y + 0.5);
-    // normalize rotation
-    switch (tile) {
-      case 0: return;
-      case 1: break;
-      case 2: tile = 1; context.rotate(pi/2); break;
-      case 3: break;
-      case 4: tile = 1; context.rotate(pi); break;
-      case 5: break;
-      case 6: tile = 3; context.rotate(pi/2); break;
-      case 7: break;
-      case 8: tile = 1; context.rotate(pi*1.5); break;
-      case 9: tile = 3; context.rotate(pi*1.5); break;
-      case 10: tile = 5; context.rotate(pi/2); break;
-      case 11: tile = 7; context.rotate(pi*1.5); break;
-      case 12: tile = 3; context.rotate(pi); break;
-      case 13: tile = 7; context.rotate(pi); break;
-      case 14: tile = 7; context.rotate(pi/2); break;
-      case 15: break;
-      default: throw new AssertionFailure();
-    }
+  renderTile(context: CanvasRenderingContext2D, tile_value: number, x: number, y: number) {
+    if (tile_value === 0) return;
+    context.save();
+    try {
+      context.translate(x + 0.5, y + 0.5);
+      // normalize rotation
+      switch (tile_value) {
+        case 1: break;
+        case 2: tile_value = 1; context.rotate(pi/2); break;
+        case 3: break;
+        case 4: tile_value = 1; context.rotate(pi); break;
+        case 5: break;
+        case 6: tile_value = 3; context.rotate(pi/2); break;
+        case 7: break;
+        case 8: tile_value = 1; context.rotate(pi*1.5); break;
+        case 9: tile_value = 3; context.rotate(pi*1.5); break;
+        case 10: tile_value = 5; context.rotate(pi/2); break;
+        case 11: tile_value = 7; context.rotate(pi*1.5); break;
+        case 12: tile_value = 3; context.rotate(pi); break;
+        case 13: tile_value = 7; context.rotate(pi); break;
+        case 14: tile_value = 7; context.rotate(pi/2); break;
+        case 15: break;
+        default: throw new AssertionFailure();
+      }
 
-    switch (tile) {
-      case 1:
-        context.beginPath();
-        context.arc(0, 0, 0.25, 0, 2*pi);
-        context.lineTo(0.5, 0);
-        context.stroke();
-        break;
-      case 3:
-        context.beginPath();
-        context.arc(0.5, 0.5, 0.5, pi, pi*1.5);
-        context.stroke();
-        break;
-      case 5:
-        context.beginPath();
-        context.moveTo(0.5, 0);
-        context.lineTo(-0.5, 0);
-        context.stroke();
-        break;
-      case 7:
-        context.beginPath();
-        context.arc(-0.5, 0.5, 0.5, pi*1.5, 2*pi);
-        context.stroke();
-        context.beginPath();
-        context.arc(0.5, 0.5, 0.5, pi, pi*1.5);
-        context.stroke();
-        break;
-      case 15:
-        context.beginPath();
-        context.arc(0.5, 0.5, 0.5, pi, pi*1.5);
-        context.stroke();
-        context.beginPath();
-        context.arc(0.5, -0.5, 0.5, pi/2, pi);
-        context.stroke();
-        context.beginPath();
-        context.arc(-0.5, -0.5, 0.5, 0, pi/2);
-        context.stroke();
-        context.beginPath();
-        context.arc(-0.5, 0.5, 0.5, pi*1.5, 2*pi);
-        context.stroke();
-        break;
-      default:
-        throw new AssertionFailure();
+      switch (tile_value) {
+        case 1:
+          context.beginPath();
+          context.arc(0, 0, 0.25, 0, 2*pi);
+          context.lineTo(0.5, 0);
+          context.stroke();
+          break;
+        case 3:
+          context.beginPath();
+          context.arc(0.5, 0.5, 0.5, pi, pi*1.5);
+          context.stroke();
+          break;
+        case 5:
+          context.beginPath();
+          context.moveTo(0.5, 0);
+          context.lineTo(-0.5, 0);
+          context.stroke();
+          break;
+        case 7:
+          context.beginPath();
+          context.arc(-0.5, 0.5, 0.5, pi*1.5, 2*pi);
+          context.stroke();
+          context.beginPath();
+          context.arc(0.5, 0.5, 0.5, pi, pi*1.5);
+          context.stroke();
+          break;
+        case 15:
+          context.beginPath();
+          context.arc(0.5, 0.5, 0.5, pi, pi*1.5);
+          context.stroke();
+          context.beginPath();
+          context.arc(0.5, -0.5, 0.5, pi/2, pi);
+          context.stroke();
+          context.beginPath();
+          context.arc(-0.5, -0.5, 0.5, 0, pi/2);
+          context.stroke();
+          context.beginPath();
+          context.arc(-0.5, 0.5, 0.5, pi*1.5, 2*pi);
+          context.stroke();
+          break;
+        default:
+          throw new AssertionFailure();
+      }
+    } finally {
+      context.restore();
     }
   }
 }
 
 class HexagonLevel extends Level {
-  // tile values are bitfields:
+  // this is a (5,3) sized hex grid:
+  //     0  1  2  3  4
+  //    __    __    __
+  //   /  \__/  \__/  \
+  // 0 \__/  \__/  \__/
+  //   /  \__/  \__/  \
+  // 1 \__/  \__/  \__/
+  //   /  \__/  \__/  \
+  // 2 \__/  \__/  \__/
+  //      \__/  \__/
+  //
+  // tile values are a bit for each edge:
   //    16
   // 08    32
   // 04    01
   //    02
-  // odd columns are offset down
-  // 0       2       4
-  //     1       3       5
-  // 6       8       a
-  //     7       9       b
-  // c       e       g
-  //     d       f       h
-  // with and odd tiles_per_column:
-  // 0       2       4
-  //     1       3
-  // 5       7       9
-  //     6       8
-  // a       c       e
-  //     b       d
+  // the length of each edge is 1 unit.
+  // the height of a hexagon is sqrt3.
+
+  getScaleX() { return 1.5; }
+  getScaleY() { return sqrt3; }
 
   getTileFromCoord(x: number, y: number): number {
     return y * this.tiles_per_row + x;
@@ -271,7 +295,7 @@ class HexagonLevel extends Level {
     return {x, y};
   }
 
-  allLocations(): number[] {
+  allTiles(): number[] {
     let result: number[] = [];
     for (let i = 0; i < this.tiles.length; i++) {
       result.push(i);
@@ -339,47 +363,96 @@ class HexagonLevel extends Level {
   }
 
   rotateTile(tile: number): boolean {
-    const {x, y} = this.getTileCoords(tile);
-    if (x <= 0 || x >= this.tiles_per_row - 1 ||
-        y <= 0 || y >= this.tiles_per_column - 1) {
-      // out of bounds
-      return false;
-    }
+    if (!this.isInBounds(tile)) return false;
     let tile_value = this.tiles[tile];
     tile_value = 0x3f & ((tile_value << 1) | (tile_value >> 5));
     this.tiles[tile] = tile_value;
     return true;
   }
 
-  renderLevel(context: CanvasRenderingContext2D) {
-    void context;
-    throw new AssertionFailure();
+  rotateRandomly(tile: number) {
+    let tile_value = this.tiles[tile];
+    if (tile_value === 0 || tile_value === 0x3f) return;
+    const rotations = Math.floor(Math.random() * 6);
+    if (rotations === 0) return;
+    tile_value = 0x3f & ((tile_value << rotations) | (tile_value >> (6 - rotations)));
+    this.tiles[tile] = tile_value;
   }
 
   renderGridLines(context: CanvasRenderingContext2D) {
     // horizontal squiggles
-    for (let y = 2; y < this.tiles_per_column - 1; y++) {
-      for (let x = 1; x < this.tiles_per_row - 1; x += 2) {
-        context.moveTo(1, y);
-        context.lineTo(this.tiles_per_row - 1, y);
+    for (let y = 0; y <= this.tiles_per_column; y++) {
+      // the repeating pattern is:
+      //   __
+      //  /  \__
+      //  \  /
+      //
+      const high_y = sqrt3 * y;
+      const mid_y = sqrt3 * (y + 0.5);
+      const low_y = sqrt3 * (y + 1);
+      for (let x = 0; x <= this.tiles_per_row; x += 2) {
+        const left_x = 1.5 * x;
+        context.moveTo(left_x + 0.5, low_y);
+        context.lineTo(left_x + 0.0, mid_y);
+        context.lineTo(left_x + 0.5, high_y);
+        context.lineTo(left_x + 1.5, high_y);
+        context.lineTo(left_x + 2.0, mid_y);
+        context.lineTo(left_x + 1.5, low_y);
+        context.moveTo(left_x + 2.0, mid_y);
+        context.lineTo(left_x + 3.0, mid_y);
+        // TODO: edge cases
       }
-    }
-    for (let x = 2; x < this.tiles_per_row - 1; x++) {
-      context.moveTo(x, 1);
-      context.lineTo(x, this.tiles_per_column - 1);
     }
   }
 
-  renderTile(context: CanvasRenderingContext2D, tile: number, x: number, y: number) {
-    void context;
-    void tile;
-    void x;
-    void y;
-    // TODO
+  renderTile(context: CanvasRenderingContext2D, tile_value: number, x: number, y: number) {
+    if (tile_value === 0) return;
+    context.save();
+    try {
+      if (x & 1) {
+        context.translate(1.5 * x + 1, sqrt3 * (y + 1.0));
+      } else {
+        context.translate(1.5 * x + 1, sqrt3 * (y + 0.5));
+      }
+      switch (tile_value) {
+        case 1:  break;
+        case 2:  tile_value = 1; context.rotate(1/3*pi); break;
+        case 4:  tile_value = 1; context.rotate(2/3*pi); break;
+        case 8:  tile_value = 1; context.rotate(pi);     break;
+        case 16: tile_value = 1; context.rotate(4/3*pi); break;
+        case 32: tile_value = 1; context.rotate(5/3*pi); break;
+
+        case 3:  break;
+        case 6:  tile_value = 3; context.rotate(1/3*pi); break;
+        case 12: tile_value = 3; context.rotate(2/3*pi); break;
+        case 24: tile_value = 3; context.rotate(pi);     break;
+        case 48: tile_value = 3; context.rotate(4/3*pi); break;
+        case 33: tile_value = 3; context.rotate(5/3*pi); break;
+
+        default: return; // TODO
+      }
+      switch (tile_value) {
+        case 1:
+          context.rotate(pi/6);
+          context.beginPath();
+          context.arc(0, 0, 0.5, 0, 2*pi);
+          context.lineTo(sqrt3 / 2, 0);
+          context.stroke();
+          break;
+        case 3:
+          context.beginPath();
+          context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+          context.stroke();
+          break;
+        default: throw new AssertionFailure();
+      }
+    } finally {
+      context.restore();
+    }
   }
 }
 
-let level_number = 0;
+let level_number = 10; // TODO
 let level: Level;
 function loadLevel(new_level: Level) {
   level = new_level;
@@ -391,6 +464,7 @@ window.addEventListener("resize", function() {
 });
 canvas.addEventListener("mousedown", function(event: MouseEvent) {
   if (event.altKey || event.ctrlKey || event.shiftKey) return;
+  if (event.button !== 0) return;
   event.preventDefault();
   if (game_state !== GameState.Playing) return;
   const tile_x = Math.floor((event.x - origin_x) / scale);
@@ -410,19 +484,21 @@ function handleResize() {
   buffer_canvas.width = canvas.width;
   buffer_canvas.height = canvas.height;
 
+  const display_scale_x = level.getScaleX();
+  const display_scale_y = level.getScaleY();
   // cut off half of the border tiles
-  const display_tiles_per_column = level.tiles_per_column - 1;
-  const display_tiles_per_row = level.tiles_per_row - 1;
+  const display_width = display_scale_x * (level.tiles_per_row - 1);
+  const display_height = display_scale_y * (level.tiles_per_column - 1);
 
-  const tile_aspect_ratio = display_tiles_per_column / display_tiles_per_row;
+  const level_aspect_ratio = display_height / display_width;
   const canvas_aspect_ratio = canvas.height / canvas.width;
   scale =
-    tile_aspect_ratio < canvas_aspect_ratio ?
-    canvas.width / display_tiles_per_row :
-    canvas.height / display_tiles_per_column;
+    level_aspect_ratio < canvas_aspect_ratio ?
+    canvas.width / display_width :
+    canvas.height / display_height;
 
-  origin_x = canvas.width / 2 - scale * level.tiles_per_row / 2;
-  origin_y = canvas.height / 2 - scale * level.tiles_per_column / 2;
+  origin_x = canvas.width / 2 - scale * display_scale_x * level.tiles_per_row / 2;
+  origin_y = canvas.height / 2 - scale * display_scale_y * level.tiles_per_column / 2;
 
   renderEverything();
 }
@@ -558,66 +634,23 @@ function getLevelNumber(level_number: number) {
 }
 
 function generateLevel(tiles_per_row: number, tiles_per_column: number): Level {
-  const level = new SquareLevel(tiles_per_row, tiles_per_column);
+  const level: Level = new HexagonLevel(tiles_per_row, tiles_per_column);
 
   // generate a solved puzzle
-  for (var y = 1; y < tiles_per_column - 1; y++) {
-    for (var x = 1; x < tiles_per_row - 1; x++) {
-      if (x < tiles_per_row - 2 && Math.random() < 0.5) {
-        // connect right
-        level.tiles[level.getTileFromCoord(x, y)] |= 1;
-        level.tiles[level.getTileFromCoord(x + 1, y)] |= 4;
-      }
-      if (y < tiles_per_column - 2 && Math.random() < 0.5) {
-        // connect down
-        level.tiles[level.getTileFromCoord(x, y)] |= 2;
-        level.tiles[level.getTileFromCoord(x, y + 1)] |= 8;
-      }
-    }
-  }
-
-  // make sure nothing is too easy
-  for (var y = 1; y < tiles_per_column - 1; y++) {
-    for (var x = 1; x < tiles_per_row - 1; x++) {
-      if (Math.random() < 0.5) {
-        checkRight();
-        checkDown();
-      } else {
-        checkDown();
-        checkRight();
-      }
-    }
-  }
-  function checkRight() {
-    if (x < tiles_per_row - 2 && (
-        level.tiles[y * tiles_per_row + x] === 0 ||
-        level.tiles[y * tiles_per_row + x + 1] === 0)) {
-      // connect right
-      level.tiles[y * tiles_per_row + x] |= 1;
-      level.tiles[y * tiles_per_row + x + 1] |= 4;
-    }
-  }
-  function checkDown() {
-    if (y < tiles_per_column - 2 && (
-        level.tiles[y * tiles_per_row + x] === 0 ||
-        level.tiles[(y + 1) * tiles_per_row + x] === 0)) {
-      // connect down
-      level.tiles[y * tiles_per_row + x] |= 2;
-      level.tiles[(y + 1) * tiles_per_row + x] |= 8;
-    }
+  for (let vector of level.allEdges()) {
+    if (!level.isInBounds(vector.tile)) continue;
+    const other_tile = level.getTileFromDirection(vector.tile, vector.direction);
+    if (!level.isInBounds(other_tile)) continue;
+    if (Math.random() < 0.5) continue;
+    level.tiles[vector.tile] |= vector.direction;
+    level.tiles[other_tile] |= level.reverseDirection(vector.direction);
   }
 
   // rotate the tiles randomly
-  for (let y = 1; y < tiles_per_column - 1; y++) {
-    for (let x = 1; x < tiles_per_row - 1; x++) {
-      const rotations = Math.floor(Math.random() * 4);
-      if (rotations === 0) continue;
-      const index = y * tiles_per_row + x;
-      let tile_value = level.tiles[index];
-      tile_value = 0xf & ((tile_value << rotations) | (tile_value >> (4 - rotations)));
-      level.tiles[index] = tile_value;
-    }
+  for (let tile of level.allTiles()) {
+    level.rotateRandomly(tile);
   }
+
   return level;
 }
 
