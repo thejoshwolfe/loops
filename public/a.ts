@@ -295,37 +295,45 @@ function renderEverything() {
   context.fillStyle = "#fff";
   context.fillRect(0, 0, canvas.width, canvas.height);
 
-  // grid lines
-  const unsolved_count = level.countUnsolved();
-  if (level_number >= 4 && unsolved_count > 4) {
-    const color = Math.max(0xdd, 0xff - unsolved_count + 4).toString(16);
-    context.strokeStyle = "#" + color + color + color;
-    context.lineWidth = 3;
-    context.lineCap = "round";
-    context.beginPath();
-    for (let x = 2; x < level.tiles_per_row - 1; x++) {
-      context.moveTo(origin_x + x * scale, origin_y + 1 * scale);
-      context.lineTo(origin_x + x * scale, origin_y + (level.tiles_per_column - 1) * scale);
-    }
-    for (let y = 2; y < level.tiles_per_column - 1; y++) {
-      context.moveTo(origin_x + 1 * scale, origin_y + y * scale);
-      context.lineTo(origin_x + (level.tiles_per_row - 1) * scale, origin_y + y * scale);
-    }
-    context.stroke();
-  }
+  context.save();
+  try {
+    context.translate(origin_x, origin_y);
+    context.scale(scale, scale);
 
-  context.strokeStyle = "#000";
-  context.lineWidth = scale * 0.1;
-  context.lineCap = "round";
-  for (let location of level.allLocations()) {
-    const {x, y} = level.getTileCoords(location);
-    const tile_value = level.tiles[location];
-    context.save();
-    try {
-      renderTile(tile_value, x, y);
-    } finally {
-      context.restore();
+    // grid lines
+    const unsolved_count = level.countUnsolved();
+    if (level_number >= 4 && unsolved_count > 4) {
+      const color = Math.max(0xdd, 0xff - unsolved_count + 4).toString(16);
+      context.strokeStyle = "#" + color + color + color;
+      context.lineWidth = 3 / scale;
+      context.lineCap = "round";
+      context.beginPath();
+      for (let x = 2; x < level.tiles_per_row - 1; x++) {
+        context.moveTo(x, 1);
+        context.lineTo(x, level.tiles_per_column - 1);
+      }
+      for (let y = 2; y < level.tiles_per_column - 1; y++) {
+        context.moveTo(1, y);
+        context.lineTo(level.tiles_per_row - 1, y);
+      }
+      context.stroke();
     }
+
+    context.strokeStyle = "#000";
+    context.lineWidth = 0.1;
+    context.lineCap = "round";
+    for (let location of level.allLocations()) {
+      const {x, y} = level.getTileCoords(location);
+      const tile_value = level.tiles[location];
+      context.save();
+      try {
+        renderTile(tile_value, x, y);
+      } finally {
+        context.restore();
+      }
+    }
+  } finally {
+    context.restore();
   }
 
   // render the game into the real canvas with the alpha blend
@@ -340,7 +348,7 @@ function renderEverything() {
   }
 
   function renderTile(tile: number, x: number, y: number) {
-    context.translate(origin_x + scale*(x + 0.5), origin_y + scale*(y + 0.5));
+    context.translate(x + 0.5, y + 0.5);
     // normalize rotation
     switch (tile) {
       case 0: return;
@@ -365,41 +373,41 @@ function renderEverything() {
     switch (tile) {
       case 1:
         context.beginPath();
-        context.arc(0, 0, scale*0.25, 0, 2*pi);
-        context.lineTo(scale * 0.5, 0);
+        context.arc(0, 0, 0.25, 0, 2*pi);
+        context.lineTo(0.5, 0);
         context.stroke();
         break;
       case 3:
         context.beginPath();
-        context.arc(scale * 0.5, scale * 0.5, scale * 0.5, pi, pi*1.5);
+        context.arc(0.5, 0.5, 0.5, pi, pi*1.5);
         context.stroke();
         break;
       case 5:
         context.beginPath();
-        context.moveTo(scale * 0.5, 0);
-        context.lineTo(scale * -0.5, 0);
+        context.moveTo(0.5, 0);
+        context.lineTo(-0.5, 0);
         context.stroke();
         break;
       case 7:
         context.beginPath();
-        context.arc(scale * -0.5, scale * 0.5, scale * 0.5, pi*1.5, 2*pi);
+        context.arc(-0.5, 0.5, 0.5, pi*1.5, 2*pi);
         context.stroke();
         context.beginPath();
-        context.arc(scale * 0.5, scale * 0.5, scale * 0.5, pi, pi*1.5);
+        context.arc(0.5, 0.5, 0.5, pi, pi*1.5);
         context.stroke();
         break;
       case 15:
         context.beginPath();
-        context.arc(scale * 0.5, scale * 0.5, scale * 0.5, pi, pi*1.5);
+        context.arc(0.5, 0.5, 0.5, pi, pi*1.5);
         context.stroke();
         context.beginPath();
-        context.arc(scale * 0.5, scale * -0.5, scale * 0.5, pi/2, pi);
+        context.arc(0.5, -0.5, 0.5, pi/2, pi);
         context.stroke();
         context.beginPath();
-        context.arc(scale * -0.5, scale * -0.5, scale * 0.5, 0, pi/2);
+        context.arc(-0.5, -0.5, 0.5, 0, pi/2);
         context.stroke();
         context.beginPath();
-        context.arc(scale * -0.5, scale * 0.5, scale * 0.5, pi*1.5, 2*pi);
+        context.arc(-0.5, 0.5, 0.5, pi*1.5, 2*pi);
         context.stroke();
         break;
       default:
