@@ -429,7 +429,69 @@ class HexagonLevel extends Level {
         case 48: tile_value = 3; context.rotate(4/3*pi); break;
         case 33: tile_value = 3; context.rotate(5/3*pi); break;
 
-        default: return; // TODO
+        case 5:  break;
+        case 10: tile_value = 5; context.rotate(1/3*pi); break;
+        case 20: tile_value = 5; context.rotate(2/3*pi); break;
+        case 40: tile_value = 5; context.rotate(pi);     break;
+        case 17: tile_value = 5; context.rotate(4/3*pi); break;
+        case 34: tile_value = 5; context.rotate(5/3*pi); break;
+
+        case 7:  break;
+        case 14: tile_value = 7; context.rotate(1/3*pi); break;
+        case 28: tile_value = 7; context.rotate(2/3*pi); break;
+        case 56: tile_value = 7; context.rotate(pi);     break;
+        case 49: tile_value = 7; context.rotate(4/3*pi); break;
+        case 35: tile_value = 7; context.rotate(5/3*pi); break;
+
+        case 9:  break;
+        case 18: tile_value = 9; context.rotate(1/3*pi); break;
+        case 36: tile_value = 9; context.rotate(2/3*pi); break;
+
+        case 11: break;
+        case 22: tile_value = 11; context.rotate(1/3*pi); break;
+        case 44: tile_value = 11; context.rotate(2/3*pi); break;
+        case 25: tile_value = 11; context.rotate(pi);     break;
+        case 50: tile_value = 11; context.rotate(4/3*pi); break;
+        case 37: tile_value = 11; context.rotate(5/3*pi); break;
+
+        case 13: break;
+        case 26: tile_value = 13; context.rotate(1/3*pi); break;
+        case 52: tile_value = 13; context.rotate(2/3*pi); break;
+        case 41: tile_value = 13; context.rotate(pi);     break;
+        case 19: tile_value = 13; context.rotate(4/3*pi); break;
+        case 38: tile_value = 13; context.rotate(5/3*pi); break;
+
+        case 15: break;
+        case 30: tile_value = 15; context.rotate(1/3*pi); break;
+        case 60: tile_value = 15; context.rotate(2/3*pi); break;
+        case 57: tile_value = 15; context.rotate(pi);     break;
+        case 51: tile_value = 15; context.rotate(4/3*pi); break;
+        case 39: tile_value = 15; context.rotate(5/3*pi); break;
+
+        case 21: break;
+        case 42: tile_value = 21; context.rotate(1/3*pi); break;
+
+        case 23: break;
+        case 46: tile_value = 23; context.rotate(1/3*pi); break;
+        case 29: tile_value = 23; context.rotate(2/3*pi); break;
+        case 58: tile_value = 23; context.rotate(pi);     break;
+        case 53: tile_value = 23; context.rotate(4/3*pi); break;
+        case 43: tile_value = 23; context.rotate(5/3*pi); break;
+
+        case 27: break;
+        case 54: tile_value = 27; context.rotate(1/3*pi); break;
+        case 45: tile_value = 27; context.rotate(2/3*pi); break;
+
+        case 31: break;
+        case 62: tile_value = 31; context.rotate(1/3*pi); break;
+        case 61: tile_value = 31; context.rotate(2/3*pi); break;
+        case 59: tile_value = 31; context.rotate(pi);     break;
+        case 55: tile_value = 31; context.rotate(4/3*pi); break;
+        case 47: tile_value = 31; context.rotate(5/3*pi); break;
+
+        case 63: break;
+
+        default: throw new AssertionFailure();
       }
       switch (tile_value) {
         case 1:
@@ -444,6 +506,84 @@ class HexagonLevel extends Level {
           context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
           context.stroke();
           break;
+        case 5:
+          context.beginPath();
+          context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
+          context.stroke();
+          break;
+        case 7:
+          context.beginPath();
+          context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
+          context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+          context.stroke();
+          break;
+        case 9:
+          context.beginPath();
+          context.moveTo(0.75, sqrt3 / 4);
+          context.lineTo(-0.75, -sqrt3 / 4);
+          context.stroke();
+          break;
+        case 11:
+          context.beginPath();
+          context.arc(-1.5, sqrt3/2, 1.5, 5/3*pi, 2*pi);
+          context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+          context.stroke();
+          break;
+        case 13:
+          context.beginPath();
+          context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
+          context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
+          context.stroke();
+          break;
+        case 15:
+          context.beginPath();
+          context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
+          context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
+          context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+          context.stroke();
+          break;
+        case 21:
+          context.beginPath();
+          context.arc(1.5, -sqrt3/2, 1.5, 2/3*pi, pi);
+          context.arc(-1.5, -sqrt3/2, 1.5, 0, 1/3*pi);
+          context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
+          context.stroke();
+          break;
+        case 23:
+          context.beginPath();
+          context.arc(1.5, -sqrt3/2, 1.5, 2/3*pi, pi);
+          context.arc(-1.5, -sqrt3/2, 1.5, 0, 1/3*pi);
+          context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
+          context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+          context.stroke();
+          break;
+        case 27:
+          context.beginPath();
+          context.arc(-0.5, -sqrt3/2, 0.5, 0, 2/3*pi);
+          context.stroke();
+          context.beginPath();
+          context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+          context.stroke();
+          break;
+        case 31:
+          context.beginPath();
+          context.arc(-0.5, -sqrt3/2, 0.5, 0, 2/3*pi);
+          context.arc(-1, 0, 0.5, 5/3*pi, 7/3*pi);
+          context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
+          context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+          context.stroke();
+          break;
+        case 63:
+          context.beginPath();
+          context.arc(1, 0, 0.5, 2/3*pi, 4/3*pi);
+          context.arc(0.5, -sqrt3/2, 0.5, 1/3*pi, pi);
+          context.arc(-0.5, -sqrt3/2, 0.5, 0, 2/3*pi);
+          context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
+          context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
+          context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+          context.stroke();
+          break;
+
         default: throw new AssertionFailure();
       }
     } finally {
