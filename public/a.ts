@@ -45,6 +45,7 @@ abstract class Level {
   abstract reverseDirection(direction: number): number;
   abstract rotateTile(tile: number): boolean;
   abstract rotateRandomly(tile: number): void;
+  abstract forceGrid(): boolean;
   abstract renderGridLines(context: CanvasRenderingContext2D): void;
   abstract renderTile(context: CanvasRenderingContext2D, tile_value: number, x: number, y: number): void;
 
@@ -72,8 +73,7 @@ abstract class Level {
 
   renderLevel(context: CanvasRenderingContext2D) {
     // grid lines
-    //const unsolved_count = level_number < 5 ? 999 : this.countUnsolved();
-    const unsolved_count = 999; // TODO
+    const unsolved_count = this.forceGrid() ? 999 : this.countUnsolved();
     if (unsolved_count > 4) {
       const color = Math.max(0xdd, 0xff - unsolved_count + 4).toString(16);
       context.strokeStyle = "#" + color + color + color;
@@ -88,6 +88,7 @@ abstract class Level {
     context.strokeStyle = "#000";
     context.lineWidth = 0.1;
     context.lineCap = "round";
+    context.lineJoin = "round";
     for (let location of this.allTiles()) {
       const {x, y} = this.getTileCoords(location);
       const tile_value = this.tiles[location];
@@ -179,6 +180,10 @@ class SquareLevel extends Level {
     if (rotations === 0) return;
     tile_value = 0xf & ((tile_value << rotations) | (tile_value >> (4 - rotations)));
     this.tiles[tile] = tile_value;
+  }
+
+  forceGrid(): boolean {
+    return this.tiles_per_row < 8;
   }
 
   renderGridLines(context: CanvasRenderingContext2D) {
@@ -407,6 +412,10 @@ class HexagonLevel extends Level {
     this.tiles[tile] = tile_value;
   }
 
+  forceGrid(): boolean {
+    return true;
+  }
+
   renderGridLines(context: CanvasRenderingContext2D) {
     // horizontal squiggles
     for (let y = 0; y <= this.tiles_per_column; y++) {
@@ -620,7 +629,7 @@ class HexagonLevel extends Level {
   }
 }
 
-let level_number = 10; // TODO
+let level_number = 0;
 let level: Level;
 function loadLevel(new_level: Level) {
   level = new_level;
@@ -796,14 +805,28 @@ function getLevelNumber(level_number: number) {
         0,12, 1, 4, 0,
         0, 0, 0, 0, 0,
       ]);
+    case 4:
+    case 5:
+    case 6:
+    case 7:
+    case 8:
+      return generateLevel(new SquareLevel(level_number + 3, level_number + 3));
+    case 9:
+    case 10:
+    case 11:
+    case 12:
+    case 13:
+      return generateLevel(new HexagonLevel(level_number - 4, level_number - 4));
     default:
-      return generateLevel(level_number + 3, level_number + 3);
+      if (level_number & 1) {
+        return generateLevel(new HexagonLevel(10, 10));
+      } else {
+        return generateLevel(new SquareLevel(12, 12));
+      }
   }
 }
 
-function generateLevel(tiles_per_row: number, tiles_per_column: number): Level {
-  const level: Level = new HexagonLevel(tiles_per_row, tiles_per_column);
-
+function generateLevel(level: Level): Level {
   // generate a solved puzzle
   for (let vector of level.allEdges()) {
     if (!level.isInBounds(vector.tile)) continue;
