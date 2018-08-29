@@ -36,6 +36,7 @@ abstract class Level {
   abstract getScaleX(): number;
   abstract getScaleY(): number;
 
+  abstract getTileFromDisplayPoint(display_x: number, display_y: number): number;
   abstract getTileFromCoord(x: number, y: number): number;
   abstract getTileCoords(location: number): Coord;
   abstract allTiles(): number[];
@@ -104,6 +105,10 @@ class SquareLevel extends Level {
 
   getScaleX() { return 1; }
   getScaleY() { return 1; }
+
+  getTileFromDisplayPoint(display_x: number, display_y: number): number {
+    return this.getTileFromCoord(Math.floor(display_x), Math.floor(display_y));
+  }
 
   getTileFromCoord(x: number, y: number): number {
     return y * this.tiles_per_row + x;
@@ -284,6 +289,29 @@ class HexagonLevel extends Level {
 
   getScaleX() { return 1.5; }
   getScaleY() { return sqrt3; }
+
+  getTileFromDisplayPoint(display_x: number, display_y: number): number {
+    // we could do some fancy math to figure out which space it is.
+    // ... or ... we could get close and just do some euclidean distance measurements.
+    const general_neighborhood_x = Math.floor(display_x / 1.5);
+    const general_neighborhood_y = Math.floor(display_y / sqrt3);
+
+    let closest_distance_squared = Infinity;
+    let closest_tile: number = NaN;
+    for (let x of [general_neighborhood_x - 1, general_neighborhood_x, general_neighborhood_x + 1]) {
+      for (let y of [general_neighborhood_y - 1, general_neighborhood_y, general_neighborhood_y + 1]) {
+        const center_x = 1.5 * x + 1;
+        const center_y = sqrt3 * (y + ((x & 1) ? 1 : 0.5));
+        const distance_squared = (display_y - center_y)**2 + (display_x - center_x)**2;
+        if (distance_squared < closest_distance_squared) {
+          closest_distance_squared = distance_squared;
+          closest_tile = this.getTileFromCoord(x, y);
+        }
+      }
+    }
+    if (isNaN(closest_tile)) throw new AssertionFailure();
+    return closest_tile;
+  }
 
   getTileFromCoord(x: number, y: number): number {
     return y * this.tiles_per_row + x;
@@ -607,9 +635,9 @@ canvas.addEventListener("mousedown", function(event: MouseEvent) {
   if (event.button !== 0) return;
   event.preventDefault();
   if (game_state !== GameState.Playing) return;
-  const tile_x = Math.floor((event.x - origin_x) / scale);
-  const tile_y = Math.floor((event.y - origin_y) / scale);
-  const tile = level.getTileFromCoord(tile_x, tile_y);
+  const display_x = (event.x - origin_x) / scale;
+  const display_y = (event.y - origin_y) / scale;
+  const tile = level.getTileFromDisplayPoint(display_x, display_y);
   rotateTile(tile);
 });
 
