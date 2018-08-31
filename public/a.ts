@@ -807,21 +807,18 @@ function getLevelNumber(level_number: number) {
       ]);
     case 4:
     case 5:
+      return generateLevel(new SquareLevel(level_number + 3, level_number + 3));
     case 6:
     case 7:
     case 8:
-      return generateLevel(new SquareLevel(level_number + 3, level_number + 3));
     case 9:
     case 10:
-    case 11:
-    case 12:
-    case 13:
-      return generateLevel(new HexagonLevel(level_number - 4, level_number - 4));
+      return generateLevel(new HexagonLevel(level_number - 1, level_number - 1));
     default:
       if (level_number & 1) {
-        return generateLevel(new HexagonLevel(10, 10));
+        return generateLevel(new HexagonLevel(9, 9));
       } else {
-        return generateLevel(new SquareLevel(12, 12));
+        return generateLevel(new SquareLevel(11, 11));
       }
   }
 }
