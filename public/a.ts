@@ -86,7 +86,7 @@ abstract class Level {
     }
 
     context.strokeStyle = "#000";
-    context.lineWidth = 0.1;
+    context.lineWidth = level.getScaleX() / 10;
     context.lineCap = "round";
     context.lineJoin = "round";
     for (let location of this.allTiles()) {
