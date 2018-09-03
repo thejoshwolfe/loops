@@ -16,10 +16,12 @@ type Coord = {x:number, y:number};
 type Vector = {tile:number, direction:number};
 
 abstract class Level {
+  force_grid_visible: boolean;
   tiles_per_row: number;
   tiles_per_column: number;
   tiles: number[];
-  constructor(tiles_per_row: number, tiles_per_column: number, tiles?: number[]) {
+  constructor(force_grid_visible: boolean, tiles_per_row: number, tiles_per_column: number, tiles?: number[]) {
+    this.force_grid_visible = force_grid_visible;
     this.tiles_per_row = tiles_per_row;
     this.tiles_per_column = tiles_per_column;
     if (tiles) {
@@ -45,7 +47,6 @@ abstract class Level {
   abstract reverseDirection(direction: number): number;
   abstract rotateTile(tile: number): boolean;
   abstract rotateRandomly(tile: number): void;
-  abstract forceGrid(): boolean;
   abstract renderGridLines(context: CanvasRenderingContext2D): void;
   abstract renderTile(context: CanvasRenderingContext2D, tile_value: number, x: number, y: number): void;
 
@@ -73,7 +74,7 @@ abstract class Level {
 
   renderLevel(context: CanvasRenderingContext2D) {
     // grid lines
-    const unsolved_count = this.forceGrid() ? 999 : this.countUnsolved();
+    const unsolved_count = this.force_grid_visible ? 999 : this.countUnsolved();
     if (unsolved_count > 4) {
       const color = Math.max(0xdd, 0xff - unsolved_count + 4).toString(16);
       context.strokeStyle = "#" + color + color + color;
@@ -180,10 +181,6 @@ class SquareLevel extends Level {
     if (rotations === 0) return;
     tile_value = 0xf & ((tile_value << rotations) | (tile_value >> (4 - rotations)));
     this.tiles[tile] = tile_value;
-  }
-
-  forceGrid(): boolean {
-    return this.tiles_per_row < 8;
   }
 
   renderGridLines(context: CanvasRenderingContext2D) {
@@ -410,10 +407,6 @@ class HexagonLevel extends Level {
     if (rotations === 0) return;
     tile_value = 0x3f & ((tile_value << rotations) | (tile_value >> (6 - rotations)));
     this.tiles[tile] = tile_value;
-  }
-
-  forceGrid(): boolean {
-    return true;
   }
 
   renderGridLines(context: CanvasRenderingContext2D) {
@@ -784,21 +777,21 @@ function loadNewLevel() {
 function getLevelNumber(level_number: number) {
   switch (level_number) {
     case 1:
-      return new SquareLevel(4, 4, [
+      return new SquareLevel(true, 4, 4, [
         0, 0, 0, 0,
         0, 6, 1, 0,
         0, 6, 2, 0,
         0, 0, 0, 0,
       ]);
     case 2:
-      return new SquareLevel(5, 4, [
+      return new SquareLevel(true, 5, 4, [
         0, 0, 0, 0, 0,
         0, 6,14,12, 0,
         0, 3, 9, 4, 0,
         0, 0, 0, 0, 0,
       ]);
     case 3:
-      return new SquareLevel(5, 5, [
+      return new SquareLevel(true, 5, 5, [
         0, 0, 0, 0, 0,
         0, 2, 3, 4, 0,
         0, 2, 1, 5, 0,
@@ -806,19 +799,22 @@ function getLevelNumber(level_number: number) {
         0, 0, 0, 0, 0,
       ]);
     case 4:
+      return generateLevel(new SquareLevel(true, 7, 7));
     case 5:
-      return generateLevel(new SquareLevel(level_number + 3, level_number + 3));
+      return generateLevel(new SquareLevel(false, 8, 8));
     case 6:
+      return generateLevel(new HexagonLevel(true, 5, 5));
     case 7:
+      return generateLevel(new HexagonLevel(true, 6, 6));
     case 8:
+      return generateLevel(new HexagonLevel(true, 7, 7));
     case 9:
-    case 10:
-      return generateLevel(new HexagonLevel(level_number - 1, level_number - 1));
+      return generateLevel(new HexagonLevel(false, 8, 8));
     default:
       if (level_number & 1) {
-        return generateLevel(new HexagonLevel(9, 9));
+        return generateLevel(new HexagonLevel(false, 9, 9));
       } else {
-        return generateLevel(new SquareLevel(11, 11));
+        return generateLevel(new SquareLevel(false, 10, 10));
       }
   }
 }
