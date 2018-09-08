@@ -13,45 +13,58 @@ enum GameState {
 let game_state = GameState.Playing;
 
 type Coord = {x:number, y:number};
-type Vector = {tile:number, direction:number};
+type Vector = {tile_index:number, direction:number};
+type Tile = {colors:number[]};
 
 abstract class Level {
   force_grid_visible: boolean;
   tiles_per_row: number;
   tiles_per_column: number;
-  tiles: number[];
-  constructor(force_grid_visible: boolean, tiles_per_row: number, tiles_per_column: number, tiles?: number[]) {
+  color_count: number;
+  tiles: Tile[];
+  constructor(force_grid_visible: boolean, tiles_per_row: number, tiles_per_column: number, color_count: number, tiles?: Tile[]) {
     this.force_grid_visible = force_grid_visible;
     this.tiles_per_row = tiles_per_row;
     this.tiles_per_column = tiles_per_column;
+    this.color_count = color_count;
     if (tiles) {
-      if (tiles_per_row * tiles_per_column !== tiles.length) throw new AssertionFailure();
       this.tiles = tiles;
     } else {
+      assert(color_count === 1);
       this.tiles = [];
       for (let i = 0; i < tiles_per_row * tiles_per_column; i++) {
-        this.tiles.push(0);
+        this.tiles.push({colors:[0]});
       }
+    }
+
+    assert(tiles_per_row * tiles_per_column === this.tiles.length);
+    for (let tile of this.tiles) {
+      assert(tile.colors.length === color_count);
     }
   }
 
   abstract getScaleX(): number;
   abstract getScaleY(): number;
 
-  abstract getTileFromDisplayPoint(display_x: number, display_y: number): number;
-  abstract getTileFromCoord(x: number, y: number): number;
-  abstract getTileCoords(location: number): Coord;
-  abstract allTiles(): number[];
+  abstract getTileIndexFromDisplayPoint(display_x: number, display_y: number): number;
+  abstract getTileIndexFromCoord(x: number, y: number): number;
+  abstract getTileCoordFromIndex(location: number): Coord;
+  abstract allTileIndexes(): number[];
   abstract allEdges(): Vector[];
-  abstract getTileFromDirection(tile: number, direction: number): number;
+  abstract getTileIndexFromVector(tile_index: number, direction: number): number;
   abstract reverseDirection(direction: number): number;
-  abstract rotateTile(tile: number): boolean;
-  abstract rotateRandomly(tile: number): void;
+  abstract rotateTile(tile_index: number): boolean;
+  abstract rotateRandomly(tile_index: number): void;
   abstract renderGridLines(context: CanvasRenderingContext2D): void;
-  abstract renderTile(context: CanvasRenderingContext2D, tile_value: number, x: number, y: number): void;
+  abstract renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number): void;
 
-  isInBounds(tile: number): boolean {
-    const {x, y} = this.getTileCoords(tile);
+  colors(): number[] {
+    assert(this.color_count === 1);
+    return [0];
+  }
+
+  isInBounds(tile_index: number): boolean {
+    const {x, y} = this.getTileCoordFromIndex(tile_index);
     return (
       1 <= x && x < this.tiles_per_row - 1 &&
       1 <= y && y < this.tiles_per_column - 1
@@ -61,15 +74,17 @@ abstract class Level {
   countUnsolved(): number {
     // possible optimization: cache this result
     let result = 0;
-    for (let {tile, direction} of this.allEdges()) {
-      const a = this.getEdgeValue(tile, direction);
-      const b = this.getEdgeValue(this.getTileFromDirection(tile, direction), this.reverseDirection(direction));
-      if (a !== b) result += 1;
+    for (let {tile_index, direction} of this.allEdges()) {
+      for (let color_index of this.colors()) {
+        const a = this.getEdgeValue(tile_index, color_index, direction);
+        const b = this.getEdgeValue(this.getTileIndexFromVector(tile_index, direction), color_index, this.reverseDirection(direction));
+        if (a !== b) result += 1;
+      }
     }
     return result;
   }
-  getEdgeValue(tile: number, direction: number): number {
-    return +!!(this.tiles[tile] & direction);
+  getEdgeValue(tile_index: number, color_index: number, direction: number): number {
+    return +!!(this.tiles[tile_index].colors[color_index] & direction);
   }
 
   renderLevel(context: CanvasRenderingContext2D) {
@@ -86,14 +101,16 @@ abstract class Level {
       context.stroke();
     }
 
-    context.strokeStyle = "#000";
-    context.lineWidth = level.getScaleX() / 10;
     context.lineCap = "round";
     context.lineJoin = "round";
-    for (let location of this.allTiles()) {
-      const {x, y} = this.getTileCoords(location);
-      const tile_value = this.tiles[location];
-      this.renderTile(context, tile_value, x, y);
+    for (let color_index of this.colors()) {
+      context.strokeStyle = "#000";
+      context.lineWidth = level.getScaleX() / 10;
+      for (let location of this.allTileIndexes()) {
+        const {x, y} = this.getTileCoordFromIndex(location);
+        const color_value = this.tiles[location].colors[color_index];
+        this.renderTile(context, color_value, x, y);
+      }
     }
   }
 }
@@ -108,21 +125,21 @@ class SquareLevel extends Level {
   getScaleX() { return 1; }
   getScaleY() { return 1; }
 
-  getTileFromDisplayPoint(display_x: number, display_y: number): number {
-    return this.getTileFromCoord(Math.floor(display_x), Math.floor(display_y));
+  getTileIndexFromDisplayPoint(display_x: number, display_y: number): number {
+    return this.getTileIndexFromCoord(Math.floor(display_x), Math.floor(display_y));
   }
 
-  getTileFromCoord(x: number, y: number): number {
+  getTileIndexFromCoord(x: number, y: number): number {
     return y * this.tiles_per_row + x;
   }
 
-  getTileCoords(location: number): Coord {
+  getTileCoordFromIndex(location: number): Coord {
     const x = location % this.tiles_per_row;
     const y = (location - x) / this.tiles_per_row;
     return {x, y};
   }
 
-  allTiles(): number[] {
+  allTileIndexes(): number[] {
     let result: number[] = [];
     for (let i = 0; i < this.tiles.length; i++) {
       result.push(i);
@@ -134,27 +151,27 @@ class SquareLevel extends Level {
     let result: Vector[] = [];
     for (let y = 0; y < this.tiles_per_column - 1; y++) {
       for (let x = 0; x < this.tiles_per_row - 1; x++) {
-        result.push({tile:this.getTileFromCoord(x, y), direction:1});
-        result.push({tile:this.getTileFromCoord(x, y), direction:2});
+        result.push({tile_index:this.getTileIndexFromCoord(x, y), direction:1});
+        result.push({tile_index:this.getTileIndexFromCoord(x, y), direction:2});
       }
     }
     return result;
   }
 
-  getTileFromDirection(tile: number, direction: number): number {
+  getTileIndexFromVector(tile_index: number, direction: number): number {
     switch (direction) {
       case 1:
         // right
-        return tile + 1;
+        return tile_index + 1;
       case 2:
         // down
-        return tile + this.tiles_per_row;
+        return tile_index + this.tiles_per_row;
       case 4:
         // left
-        return tile - 1;
+        return tile_index - 1;
       case 8:
         // up
-        return tile - this.tiles_per_row;
+        return tile_index - this.tiles_per_row;
     }
     throw new AssertionFailure();
   }
@@ -166,21 +183,24 @@ class SquareLevel extends Level {
     );
   }
 
-  rotateTile(tile: number): boolean {
-    if (!this.isInBounds(tile)) return false;
-    let tile_value = this.tiles[tile];
-    tile_value = 0xf & ((tile_value << 1) | (tile_value >> 3));
-    this.tiles[tile] = tile_value;
+  rotateTile(tile_index: number): boolean {
+    if (!this.isInBounds(tile_index)) return false;
+    for (let color_index of this.colors()) {
+      let color_value = this.tiles[tile_index].colors[color_index];
+      color_value = 0xf & ((color_value << 1) | (color_value >> 3));
+      this.tiles[tile_index].colors[color_index] = color_value;
+    }
     return true;
   }
 
-  rotateRandomly(tile: number) {
-    let tile_value = this.tiles[tile];
-    if (tile_value === 0 || tile_value === 0xf) return;
+  rotateRandomly(tile_index: number) {
     const rotations = Math.floor(Math.random() * 4);
     if (rotations === 0) return;
-    tile_value = 0xf & ((tile_value << rotations) | (tile_value >> (4 - rotations)));
-    this.tiles[tile] = tile_value;
+    for (let color_index of this.colors()) {
+      let color_value = this.tiles[tile_index].colors[color_index];
+      color_value = 0xf & ((color_value << rotations) | (color_value >> (4 - rotations)));
+      this.tiles[tile_index].colors[color_index] = color_value;
+    }
   }
 
   renderGridLines(context: CanvasRenderingContext2D) {
@@ -195,32 +215,32 @@ class SquareLevel extends Level {
     }
   }
 
-  renderTile(context: CanvasRenderingContext2D, tile_value: number, x: number, y: number) {
-    if (tile_value === 0) return;
+  renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number) {
+    if (color_value === 0) return;
     context.save();
     try {
       context.translate(x + 0.5, y + 0.5);
       // normalize rotation
-      switch (tile_value) {
+      switch (color_value) {
         case 1: break;
-        case 2: tile_value = 1; context.rotate(pi/2); break;
+        case 2: color_value = 1; context.rotate(pi/2); break;
         case 3: break;
-        case 4: tile_value = 1; context.rotate(pi); break;
+        case 4: color_value = 1; context.rotate(pi); break;
         case 5: break;
-        case 6: tile_value = 3; context.rotate(pi/2); break;
+        case 6: color_value = 3; context.rotate(pi/2); break;
         case 7: break;
-        case 8: tile_value = 1; context.rotate(pi*1.5); break;
-        case 9: tile_value = 3; context.rotate(pi*1.5); break;
-        case 10: tile_value = 5; context.rotate(pi/2); break;
-        case 11: tile_value = 7; context.rotate(pi*1.5); break;
-        case 12: tile_value = 3; context.rotate(pi); break;
-        case 13: tile_value = 7; context.rotate(pi); break;
-        case 14: tile_value = 7; context.rotate(pi/2); break;
+        case 8: color_value = 1; context.rotate(pi*1.5); break;
+        case 9: color_value = 3; context.rotate(pi*1.5); break;
+        case 10: color_value = 5; context.rotate(pi/2); break;
+        case 11: color_value = 7; context.rotate(pi*1.5); break;
+        case 12: color_value = 3; context.rotate(pi); break;
+        case 13: color_value = 7; context.rotate(pi); break;
+        case 14: color_value = 7; context.rotate(pi/2); break;
         case 15: break;
         default: throw new AssertionFailure();
       }
 
-      switch (tile_value) {
+      switch (color_value) {
         case 1:
           context.beginPath();
           context.arc(0, 0, 0.25, 0, 2*pi);
@@ -292,7 +312,7 @@ class HexagonLevel extends Level {
   getScaleX() { return 1.5; }
   getScaleY() { return sqrt3; }
 
-  getTileFromDisplayPoint(display_x: number, display_y: number): number {
+  getTileIndexFromDisplayPoint(display_x: number, display_y: number): number {
     // we could do some fancy math to figure out which space it is.
     // ... or ... we could get close and just do some euclidean distance measurements.
     const general_neighborhood_x = Math.floor(display_x / 1.5);
@@ -307,25 +327,25 @@ class HexagonLevel extends Level {
         const distance_squared = (display_y - center_y)**2 + (display_x - center_x)**2;
         if (distance_squared < closest_distance_squared) {
           closest_distance_squared = distance_squared;
-          closest_tile = this.getTileFromCoord(x, y);
+          closest_tile = this.getTileIndexFromCoord(x, y);
         }
       }
     }
-    if (isNaN(closest_tile)) throw new AssertionFailure();
+    assert(!isNaN(closest_tile));
     return closest_tile;
   }
 
-  getTileFromCoord(x: number, y: number): number {
+  getTileIndexFromCoord(x: number, y: number): number {
     return y * this.tiles_per_row + x;
   }
 
-  getTileCoords(location: number): Coord {
+  getTileCoordFromIndex(location: number): Coord {
     const x = location % this.tiles_per_row;
     const y = (location - x) / this.tiles_per_row;
     return {x, y};
   }
 
-  allTiles(): number[] {
+  allTileIndexes(): number[] {
     let result: number[] = [];
     for (let i = 0; i < this.tiles.length; i++) {
       result.push(i);
@@ -336,51 +356,51 @@ class HexagonLevel extends Level {
     let result: Vector[] = [];
     for (let y = 0; y < this.tiles_per_column - 1; y++) {
       for (let x = 0; x < this.tiles_per_row; x++) {
-        let tile = this.getTileFromCoord(x, y);
+        let tile_index = this.getTileIndexFromCoord(x, y);
         if (x < this.tiles_per_row - 1) {
-          result.push({tile, direction:1});
+          result.push({tile_index, direction:1});
         }
-        result.push({tile, direction:2});
+        result.push({tile_index, direction:2});
         if (x > 0) {
-          result.push({tile, direction:4});
+          result.push({tile_index, direction:4});
         }
       }
     }
     // for the last row, only even columns have diagonal-downward edges.
     for (let x = 0; x < this.tiles_per_row; x += 2) {
-      let tile = this.getTileFromCoord(x, this.tiles_per_column - 1);
+      let tile_index = this.getTileIndexFromCoord(x, this.tiles_per_column - 1);
       if (x < this.tiles_per_row - 1) {
-        result.push({tile, direction:1});
+        result.push({tile_index, direction:1});
       }
       if (x > 0) {
-        result.push({tile, direction:4});
+        result.push({tile_index, direction:4});
       }
     }
     return result;
   }
 
-  getTileFromDirection(tile: number, direction: number): number {
-    let {x, y} = this.getTileCoords(tile);
+  getTileIndexFromVector(tile_index: number, direction: number): number {
+    let {x, y} = this.getTileCoordFromIndex(tile_index);
     const is_offset_down = !!(x & 1);
     switch (direction) {
       case 1:
         // down right
-        return this.getTileFromCoord(x + 1, is_offset_down ? y + 1 : y);
+        return this.getTileIndexFromCoord(x + 1, is_offset_down ? y + 1 : y);
       case 2:
         // down
-        return this.getTileFromCoord(x, y + 1);
+        return this.getTileIndexFromCoord(x, y + 1);
       case 4:
         // down left
-        return this.getTileFromCoord(x - 1, is_offset_down ? y + 1 : y);
+        return this.getTileIndexFromCoord(x - 1, is_offset_down ? y + 1 : y);
       case 8:
         // up left
-        return this.getTileFromCoord(x - 1, is_offset_down ? y : y - 1);
+        return this.getTileIndexFromCoord(x - 1, is_offset_down ? y : y - 1);
       case 16:
         // up
-        return this.getTileFromCoord(x, y - 1);
+        return this.getTileIndexFromCoord(x, y - 1);
       case 32:
         // up right
-        return this.getTileFromCoord(x + 1, is_offset_down ? y : y - 1);
+        return this.getTileIndexFromCoord(x + 1, is_offset_down ? y : y - 1);
     }
     throw new AssertionFailure();
   }
@@ -392,21 +412,24 @@ class HexagonLevel extends Level {
     );
   }
 
-  rotateTile(tile: number): boolean {
-    if (!this.isInBounds(tile)) return false;
-    let tile_value = this.tiles[tile];
-    tile_value = 0x3f & ((tile_value << 1) | (tile_value >> 5));
-    this.tiles[tile] = tile_value;
+  rotateTile(tile_index: number): boolean {
+    if (!this.isInBounds(tile_index)) return false;
+    for (let color_index of this.colors()) {
+      let color_value = this.tiles[tile_index].colors[color_index];
+      color_value = 0x3f & ((color_value << 1) | (color_value >> 5));
+      this.tiles[tile_index].colors[color_index] = color_value;
+    }
     return true;
   }
 
-  rotateRandomly(tile: number) {
-    let tile_value = this.tiles[tile];
-    if (tile_value === 0 || tile_value === 0x3f) return;
+  rotateRandomly(tile_index: number) {
     const rotations = Math.floor(Math.random() * 6);
     if (rotations === 0) return;
-    tile_value = 0x3f & ((tile_value << rotations) | (tile_value >> (6 - rotations)));
-    this.tiles[tile] = tile_value;
+    for (let color_index of this.colors()) {
+      let color_value = this.tiles[tile_index].colors[color_index];
+      color_value = 0x3f & ((color_value << rotations) | (color_value >> (6 - rotations)));
+      this.tiles[tile_index].colors[color_index] = color_value;
+    }
   }
 
   renderGridLines(context: CanvasRenderingContext2D) {
@@ -435,8 +458,8 @@ class HexagonLevel extends Level {
     }
   }
 
-  renderTile(context: CanvasRenderingContext2D, tile_value: number, x: number, y: number) {
-    if (tile_value === 0) return;
+  renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number) {
+    if (color_value === 0) return;
     context.save();
     try {
       if (x & 1) {
@@ -444,86 +467,86 @@ class HexagonLevel extends Level {
       } else {
         context.translate(1.5 * x + 1, sqrt3 * (y + 0.5));
       }
-      switch (tile_value) {
+      switch (color_value) {
         case 1:  break;
-        case 2:  tile_value = 1; context.rotate(1/3*pi); break;
-        case 4:  tile_value = 1; context.rotate(2/3*pi); break;
-        case 8:  tile_value = 1; context.rotate(pi);     break;
-        case 16: tile_value = 1; context.rotate(4/3*pi); break;
-        case 32: tile_value = 1; context.rotate(5/3*pi); break;
+        case 2:  color_value = 1; context.rotate(1/3*pi); break;
+        case 4:  color_value = 1; context.rotate(2/3*pi); break;
+        case 8:  color_value = 1; context.rotate(pi);     break;
+        case 16: color_value = 1; context.rotate(4/3*pi); break;
+        case 32: color_value = 1; context.rotate(5/3*pi); break;
 
         case 3:  break;
-        case 6:  tile_value = 3; context.rotate(1/3*pi); break;
-        case 12: tile_value = 3; context.rotate(2/3*pi); break;
-        case 24: tile_value = 3; context.rotate(pi);     break;
-        case 48: tile_value = 3; context.rotate(4/3*pi); break;
-        case 33: tile_value = 3; context.rotate(5/3*pi); break;
+        case 6:  color_value = 3; context.rotate(1/3*pi); break;
+        case 12: color_value = 3; context.rotate(2/3*pi); break;
+        case 24: color_value = 3; context.rotate(pi);     break;
+        case 48: color_value = 3; context.rotate(4/3*pi); break;
+        case 33: color_value = 3; context.rotate(5/3*pi); break;
 
         case 5:  break;
-        case 10: tile_value = 5; context.rotate(1/3*pi); break;
-        case 20: tile_value = 5; context.rotate(2/3*pi); break;
-        case 40: tile_value = 5; context.rotate(pi);     break;
-        case 17: tile_value = 5; context.rotate(4/3*pi); break;
-        case 34: tile_value = 5; context.rotate(5/3*pi); break;
+        case 10: color_value = 5; context.rotate(1/3*pi); break;
+        case 20: color_value = 5; context.rotate(2/3*pi); break;
+        case 40: color_value = 5; context.rotate(pi);     break;
+        case 17: color_value = 5; context.rotate(4/3*pi); break;
+        case 34: color_value = 5; context.rotate(5/3*pi); break;
 
         case 7:  break;
-        case 14: tile_value = 7; context.rotate(1/3*pi); break;
-        case 28: tile_value = 7; context.rotate(2/3*pi); break;
-        case 56: tile_value = 7; context.rotate(pi);     break;
-        case 49: tile_value = 7; context.rotate(4/3*pi); break;
-        case 35: tile_value = 7; context.rotate(5/3*pi); break;
+        case 14: color_value = 7; context.rotate(1/3*pi); break;
+        case 28: color_value = 7; context.rotate(2/3*pi); break;
+        case 56: color_value = 7; context.rotate(pi);     break;
+        case 49: color_value = 7; context.rotate(4/3*pi); break;
+        case 35: color_value = 7; context.rotate(5/3*pi); break;
 
         case 9:  break;
-        case 18: tile_value = 9; context.rotate(1/3*pi); break;
-        case 36: tile_value = 9; context.rotate(2/3*pi); break;
+        case 18: color_value = 9; context.rotate(1/3*pi); break;
+        case 36: color_value = 9; context.rotate(2/3*pi); break;
 
         case 11: break;
-        case 22: tile_value = 11; context.rotate(1/3*pi); break;
-        case 44: tile_value = 11; context.rotate(2/3*pi); break;
-        case 25: tile_value = 11; context.rotate(pi);     break;
-        case 50: tile_value = 11; context.rotate(4/3*pi); break;
-        case 37: tile_value = 11; context.rotate(5/3*pi); break;
+        case 22: color_value = 11; context.rotate(1/3*pi); break;
+        case 44: color_value = 11; context.rotate(2/3*pi); break;
+        case 25: color_value = 11; context.rotate(pi);     break;
+        case 50: color_value = 11; context.rotate(4/3*pi); break;
+        case 37: color_value = 11; context.rotate(5/3*pi); break;
 
         case 13: break;
-        case 26: tile_value = 13; context.rotate(1/3*pi); break;
-        case 52: tile_value = 13; context.rotate(2/3*pi); break;
-        case 41: tile_value = 13; context.rotate(pi);     break;
-        case 19: tile_value = 13; context.rotate(4/3*pi); break;
-        case 38: tile_value = 13; context.rotate(5/3*pi); break;
+        case 26: color_value = 13; context.rotate(1/3*pi); break;
+        case 52: color_value = 13; context.rotate(2/3*pi); break;
+        case 41: color_value = 13; context.rotate(pi);     break;
+        case 19: color_value = 13; context.rotate(4/3*pi); break;
+        case 38: color_value = 13; context.rotate(5/3*pi); break;
 
         case 15: break;
-        case 30: tile_value = 15; context.rotate(1/3*pi); break;
-        case 60: tile_value = 15; context.rotate(2/3*pi); break;
-        case 57: tile_value = 15; context.rotate(pi);     break;
-        case 51: tile_value = 15; context.rotate(4/3*pi); break;
-        case 39: tile_value = 15; context.rotate(5/3*pi); break;
+        case 30: color_value = 15; context.rotate(1/3*pi); break;
+        case 60: color_value = 15; context.rotate(2/3*pi); break;
+        case 57: color_value = 15; context.rotate(pi);     break;
+        case 51: color_value = 15; context.rotate(4/3*pi); break;
+        case 39: color_value = 15; context.rotate(5/3*pi); break;
 
         case 21: break;
-        case 42: tile_value = 21; context.rotate(1/3*pi); break;
+        case 42: color_value = 21; context.rotate(1/3*pi); break;
 
         case 23: break;
-        case 46: tile_value = 23; context.rotate(1/3*pi); break;
-        case 29: tile_value = 23; context.rotate(2/3*pi); break;
-        case 58: tile_value = 23; context.rotate(pi);     break;
-        case 53: tile_value = 23; context.rotate(4/3*pi); break;
-        case 43: tile_value = 23; context.rotate(5/3*pi); break;
+        case 46: color_value = 23; context.rotate(1/3*pi); break;
+        case 29: color_value = 23; context.rotate(2/3*pi); break;
+        case 58: color_value = 23; context.rotate(pi);     break;
+        case 53: color_value = 23; context.rotate(4/3*pi); break;
+        case 43: color_value = 23; context.rotate(5/3*pi); break;
 
         case 27: break;
-        case 54: tile_value = 27; context.rotate(1/3*pi); break;
-        case 45: tile_value = 27; context.rotate(2/3*pi); break;
+        case 54: color_value = 27; context.rotate(1/3*pi); break;
+        case 45: color_value = 27; context.rotate(2/3*pi); break;
 
         case 31: break;
-        case 62: tile_value = 31; context.rotate(1/3*pi); break;
-        case 61: tile_value = 31; context.rotate(2/3*pi); break;
-        case 59: tile_value = 31; context.rotate(pi);     break;
-        case 55: tile_value = 31; context.rotate(4/3*pi); break;
-        case 47: tile_value = 31; context.rotate(5/3*pi); break;
+        case 62: color_value = 31; context.rotate(1/3*pi); break;
+        case 61: color_value = 31; context.rotate(2/3*pi); break;
+        case 59: color_value = 31; context.rotate(pi);     break;
+        case 55: color_value = 31; context.rotate(4/3*pi); break;
+        case 47: color_value = 31; context.rotate(5/3*pi); break;
 
         case 63: break;
 
         default: throw new AssertionFailure();
       }
-      switch (tile_value) {
+      switch (color_value) {
         case 1:
           context.rotate(pi/6);
           context.beginPath();
@@ -639,8 +662,8 @@ canvas.addEventListener("mousedown", function(event: MouseEvent) {
   if (game_state !== GameState.Playing) return;
   const display_x = (event.x - origin_x) / scale;
   const display_y = (event.y - origin_y) / scale;
-  const tile = level.getTileFromDisplayPoint(display_x, display_y);
-  rotateTile(tile);
+  const tile_index = level.getTileIndexFromDisplayPoint(display_x, display_y);
+  rotateTile(tile_index);
 });
 
 // these are calculated below
@@ -706,13 +729,13 @@ const cheatcode_sequence = [
   6, 5, 6, 5, 9, 10, 9,
 ];
 let cheatcode_index = 0;
-function rotateTile(tile: number) {
-  if (!level.rotateTile(tile)) return;
+function rotateTile(tile_index: number) {
+  if (!level.rotateTile(tile_index)) return;
 
   renderEverything();
 
   if (cheatcode_index !== -1) {
-    if (cheatcode_sequence[cheatcode_index] === tile) {
+    if (cheatcode_sequence[cheatcode_index] === tile_index) {
       cheatcode_index++;
       if (cheatcode_index === cheatcode_sequence.length) {
         // success
@@ -777,67 +800,82 @@ function loadNewLevel() {
 function getLevelNumber(level_number: number) {
   switch (level_number) {
     case 1:
-      return new SquareLevel(true, 4, 4, [
+      return new SquareLevel(true, 4, 4, 1, oneColor([
         0, 0, 0, 0,
         0, 6, 1, 0,
         0, 6, 2, 0,
         0, 0, 0, 0,
-      ]);
+      ]));
     case 2:
-      return new SquareLevel(true, 5, 4, [
+      return new SquareLevel(true, 5, 4, 1, oneColor([
         0, 0, 0, 0, 0,
         0, 6,14,12, 0,
         0, 3, 9, 4, 0,
         0, 0, 0, 0, 0,
-      ]);
+      ]));
     case 3:
-      return new SquareLevel(true, 5, 5, [
+      return new SquareLevel(true, 5, 5, 1, oneColor([
         0, 0, 0, 0, 0,
         0, 2, 3, 4, 0,
         0, 2, 1, 5, 0,
         0,12, 1, 4, 0,
         0, 0, 0, 0, 0,
-      ]);
+      ]));
     case 4:
-      return generateLevel(new SquareLevel(true, 7, 7));
+      return generateLevel(new SquareLevel(true, 7, 7, 1));
     case 5:
-      return generateLevel(new SquareLevel(false, 8, 8));
+      return generateLevel(new SquareLevel(false, 8, 8, 1));
     case 6:
-      return generateLevel(new HexagonLevel(true, 5, 5));
+      return generateLevel(new HexagonLevel(true, 5, 5, 1));
     case 7:
-      return generateLevel(new HexagonLevel(true, 6, 6));
+      return generateLevel(new HexagonLevel(true, 6, 6, 1));
     case 8:
-      return generateLevel(new HexagonLevel(true, 7, 7));
+      return generateLevel(new HexagonLevel(true, 7, 7, 1));
     case 9:
-      return generateLevel(new HexagonLevel(false, 8, 8));
+      return generateLevel(new HexagonLevel(false, 8, 8, 1));
     default:
       if (level_number & 1) {
-        return generateLevel(new HexagonLevel(false, 9, 9));
+        return generateLevel(new HexagonLevel(false, 9, 9, 1));
       } else {
-        return generateLevel(new SquareLevel(false, 10, 10));
+        return generateLevel(new SquareLevel(false, 10, 10, 1));
       }
   }
+}
+
+function oneColor(values: number[]): Tile[] {
+  let result = [];
+  for (let value of values) {
+    result.push({colors:[value]});
+  }
+  return result;
 }
 
 function generateLevel(level: Level): Level {
   // generate a solved puzzle
   for (let vector of level.allEdges()) {
-    if (!level.isInBounds(vector.tile)) continue;
-    const other_tile = level.getTileFromDirection(vector.tile, vector.direction);
+    if (!level.isInBounds(vector.tile_index)) continue;
+    const other_tile = level.getTileIndexFromVector(vector.tile_index, vector.direction);
     if (!level.isInBounds(other_tile)) continue;
-    if (Math.random() < 0.5) continue;
-    level.tiles[vector.tile] |= vector.direction;
-    level.tiles[other_tile] |= level.reverseDirection(vector.direction);
+    for (let color_index of level.colors()) {
+      if (Math.random() < 0.5) continue;
+      level.tiles[vector.tile_index].colors[color_index] |= vector.direction;
+      level.tiles[other_tile].colors[color_index] |= level.reverseDirection(vector.direction);
+    }
   }
 
   // rotate the tiles randomly
-  for (let tile of level.allTiles()) {
-    level.rotateRandomly(tile);
+  for (let tile_index of level.allTileIndexes()) {
+    if (level.isInBounds(tile_index)) {
+      level.rotateRandomly(tile_index);
+    }
   }
 
   return level;
 }
 
 class AssertionFailure {}
+function assert(b: boolean) {
+  if (!b) throw new AssertionFailure();
+}
 
 loadNewLevel();
