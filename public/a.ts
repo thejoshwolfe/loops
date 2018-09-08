@@ -59,7 +59,7 @@ abstract class Level {
   abstract rotateTile(tile_index: number): boolean;
   abstract rotateRandomly(tile_index: number): void;
   abstract renderGridLines(context: CanvasRenderingContext2D): void;
-  abstract renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number): void;
+  abstract renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number, animation_progress: number): void;
 
   isInBounds(tile_index: number): boolean {
     const {x, y} = this.getTileCoordFromIndex(tile_index);
@@ -126,7 +126,8 @@ abstract class Level {
       for (let location of this.allTileIndexes()) {
         const {x, y} = this.getTileCoordFromIndex(location);
         const color_value = this.tiles[location].colors[color_index];
-        this.renderTile(context, color_value, x, y);
+        let tile_rotation_animation = tile_rotation_animations[location];
+        this.renderTile(context, color_value, x, y, tile_rotation_animation ? tile_rotation_animation.rotation : 0);
       }
     }
   }
@@ -232,11 +233,14 @@ class SquareLevel extends Level {
     }
   }
 
-  renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number) {
+  renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number, animation_progress: number) {
     if (color_value === 0) return;
     context.save();
     try {
       context.translate(x + 0.5, y + 0.5);
+      if (animation_progress !== 0) {
+        context.rotate(pi/2 * animation_progress);
+      }
       // normalize rotation
       switch (color_value) {
         case 1: break;
@@ -475,7 +479,7 @@ class HexagonLevel extends Level {
     }
   }
 
-  renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number) {
+  renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number, animation_progress: number) {
     if (color_value === 0) return;
     context.save();
     try {
@@ -483,6 +487,9 @@ class HexagonLevel extends Level {
         context.translate(1.5 * x + 1, sqrt3 * (y + 1.0));
       } else {
         context.translate(1.5 * x + 1, sqrt3 * (y + 0.5));
+      }
+      if (animation_progress !== 0) {
+        context.rotate(pi/3 * animation_progress);
       }
       switch (color_value) {
         case 1:  break;
@@ -679,9 +686,34 @@ canvas.addEventListener("mousedown", function(event: MouseEvent) {
   if (game_state !== GameState.Playing) return;
   const display_x = (event.x - origin_x) / scale;
   const display_y = (event.y - origin_y) / scale;
+
   const tile_index = level.getTileIndexFromDisplayPoint(display_x, display_y);
+  animateIntoRotation(tile_index);
   rotateTile(tile_index);
 });
+
+let tile_rotation_animations: {[index:number]:{rotation:number,cancelled:boolean}} = {};
+function animateIntoRotation(tile_index: number) {
+  const start_time = new Date().getTime();
+  let existing_animation = tile_rotation_animations[tile_index];
+  if (existing_animation) existing_animation.cancelled = true;
+  let animation = {rotation: -1, cancelled: false};
+  tile_rotation_animations[tile_index] = animation;
+  requestAnimationFrame(animate);
+  function animate() {
+    if (animation.cancelled) return;
+    const time_progress = (new Date().getTime() - start_time) / 150;
+    if (time_progress >= 1) {
+      delete tile_rotation_animations[tile_index];
+      renderEverything();
+      return;
+    }
+    animation.rotation = time_progress - 1;
+
+    renderEverything();
+    requestAnimationFrame(animate);
+  }
+}
 
 // these are calculated below
 let scale = 100;
