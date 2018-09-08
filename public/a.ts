@@ -863,7 +863,7 @@ function getLevelNumber(level_number: number) {
       if (level_number & 1) {
         return generateLevel(new HexagonLevel(false, 9, 9, color_count));
       } else {
-        return generateLevel(new SquareLevel(false, 11, 11, color_count));
+        return generateLevel(new SquareLevel(false, 10, 10, color_count));
       }
     }
   }
