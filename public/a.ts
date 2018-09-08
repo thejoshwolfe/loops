@@ -30,10 +30,13 @@ abstract class Level {
     if (tiles) {
       this.tiles = tiles;
     } else {
-      assert(color_count === 1);
       this.tiles = [];
       for (let i = 0; i < tiles_per_row * tiles_per_column; i++) {
-        this.tiles.push({colors:[0]});
+        let colors = [];
+        for (let color_index = 0; color_index < color_count; color_index++) {
+          colors.push(0);
+        }
+        this.tiles.push({colors});
       }
     }
 
@@ -58,11 +61,6 @@ abstract class Level {
   abstract renderGridLines(context: CanvasRenderingContext2D): void;
   abstract renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number): void;
 
-  colors(): number[] {
-    assert(this.color_count === 1);
-    return [0];
-  }
-
   isInBounds(tile_index: number): boolean {
     const {x, y} = this.getTileCoordFromIndex(tile_index);
     return (
@@ -75,7 +73,7 @@ abstract class Level {
     // possible optimization: cache this result
     let result = 0;
     for (let {tile_index, direction} of this.allEdges()) {
-      for (let color_index of this.colors()) {
+      for (let color_index = 0; color_index < this.color_count; color_index++) {
         const a = this.getEdgeValue(tile_index, color_index, direction);
         const b = this.getEdgeValue(this.getTileIndexFromVector(tile_index, direction), color_index, this.reverseDirection(direction));
         if (a !== b) result += 1;
@@ -103,9 +101,28 @@ abstract class Level {
 
     context.lineCap = "round";
     context.lineJoin = "round";
-    for (let color_index of this.colors()) {
-      context.strokeStyle = "#000";
-      context.lineWidth = level.getScaleX() / 10;
+    for (let color_index = 0; color_index < this.color_count; color_index++) {
+      // select an appropriate line style and color
+      switch (this.color_count) {
+        case 1:
+          context.strokeStyle = "#000";
+          context.lineWidth = level.getScaleX() * 0.1;
+          break;
+        case 2:
+          switch (color_index) {
+            case 0:
+              context.strokeStyle = "#88f";
+              context.lineWidth = level.getScaleX() * 0.15;
+              break;
+            case 1:
+              context.strokeStyle = "#f00";
+              context.lineWidth = level.getScaleX() * 0.075;
+              break;
+            default: throw new AssertionFailure();
+          }
+          break;
+        default: throw new AssertionFailure();
+      }
       for (let location of this.allTileIndexes()) {
         const {x, y} = this.getTileCoordFromIndex(location);
         const color_value = this.tiles[location].colors[color_index];
@@ -185,7 +202,7 @@ class SquareLevel extends Level {
 
   rotateTile(tile_index: number): boolean {
     if (!this.isInBounds(tile_index)) return false;
-    for (let color_index of this.colors()) {
+    for (let color_index = 0; color_index < this.color_count; color_index++) {
       let color_value = this.tiles[tile_index].colors[color_index];
       color_value = 0xf & ((color_value << 1) | (color_value >> 3));
       this.tiles[tile_index].colors[color_index] = color_value;
@@ -196,7 +213,7 @@ class SquareLevel extends Level {
   rotateRandomly(tile_index: number) {
     const rotations = Math.floor(Math.random() * 4);
     if (rotations === 0) return;
-    for (let color_index of this.colors()) {
+    for (let color_index = 0; color_index < this.color_count; color_index++) {
       let color_value = this.tiles[tile_index].colors[color_index];
       color_value = 0xf & ((color_value << rotations) | (color_value >> (4 - rotations)));
       this.tiles[tile_index].colors[color_index] = color_value;
@@ -414,7 +431,7 @@ class HexagonLevel extends Level {
 
   rotateTile(tile_index: number): boolean {
     if (!this.isInBounds(tile_index)) return false;
-    for (let color_index of this.colors()) {
+    for (let color_index = 0; color_index < this.color_count; color_index++) {
       let color_value = this.tiles[tile_index].colors[color_index];
       color_value = 0x3f & ((color_value << 1) | (color_value >> 5));
       this.tiles[tile_index].colors[color_index] = color_value;
@@ -425,7 +442,7 @@ class HexagonLevel extends Level {
   rotateRandomly(tile_index: number) {
     const rotations = Math.floor(Math.random() * 6);
     if (rotations === 0) return;
-    for (let color_index of this.colors()) {
+    for (let color_index = 0; color_index < this.color_count; color_index++) {
       let color_value = this.tiles[tile_index].colors[color_index];
       color_value = 0x3f & ((color_value << rotations) | (color_value >> (6 - rotations)));
       this.tiles[tile_index].colors[color_index] = color_value;
@@ -833,11 +850,19 @@ function getLevelNumber(level_number: number) {
       return generateLevel(new HexagonLevel(true, 7, 7, 1));
     case 9:
       return generateLevel(new HexagonLevel(false, 8, 8, 1));
+    case 10:
+      return generateLevel(new SquareLevel(true, 7, 7, 2));
+    case 11:
+      return generateLevel(new SquareLevel(true, 9, 9, 2));
+    case 12:
+      return generateLevel(new HexagonLevel(true, 6, 6, 2));
+    case 13:
+      return generateLevel(new HexagonLevel(true, 8, 8, 2));
     default:
       if (level_number & 1) {
         return generateLevel(new HexagonLevel(false, 9, 9, 1));
       } else {
-        return generateLevel(new SquareLevel(false, 10, 10, 1));
+        return generateLevel(new SquareLevel(false, 11, 11, 1));
       }
   }
 }
@@ -856,7 +881,7 @@ function generateLevel(level: Level): Level {
     if (!level.isInBounds(vector.tile_index)) continue;
     const other_tile = level.getTileIndexFromVector(vector.tile_index, vector.direction);
     if (!level.isInBounds(other_tile)) continue;
-    for (let color_index of level.colors()) {
+    for (let color_index = 0; color_index < level.color_count; color_index++) {
       if (Math.random() < 0.5) continue;
       level.tiles[vector.tile_index].colors[color_index] |= vector.direction;
       level.tiles[other_tile].colors[color_index] |= level.reverseDirection(vector.direction);
