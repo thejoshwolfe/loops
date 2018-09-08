@@ -858,12 +858,14 @@ function getLevelNumber(level_number: number) {
       return generateLevel(new HexagonLevel(true, 6, 6, 2));
     case 13:
       return generateLevel(new HexagonLevel(true, 8, 8, 2));
-    default:
+    default: {
+      let color_count = (level_number & 2) ? 2 : 1;
       if (level_number & 1) {
-        return generateLevel(new HexagonLevel(false, 9, 9, 1));
+        return generateLevel(new HexagonLevel(false, 9, 9, color_count));
       } else {
-        return generateLevel(new SquareLevel(false, 11, 11, 1));
+        return generateLevel(new SquareLevel(false, 11, 11, color_count));
       }
+    }
   }
 }
 
