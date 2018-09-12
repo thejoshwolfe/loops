@@ -705,7 +705,7 @@ canvas.addEventListener("mousedown", function(event: MouseEvent) {
   if (event.altKey || event.ctrlKey || event.shiftKey) return;
   if (event.button !== 0) return;
   event.preventDefault();
-  if (game_state !== GameState.Playing) return;
+  if (!(game_state === GameState.Playing || game_state === GameState.FadeIn)) return;
   const display_x = (event.x - origin_x) / scale;
   const display_y = (event.y - origin_y) / scale;
 
