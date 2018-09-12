@@ -112,7 +112,7 @@ abstract class Level {
           switch (color_index) {
             case 0:
               context.strokeStyle = "#88f";
-              context.lineWidth = level.getScaleX() * 0.15;
+              context.lineWidth = level.getScaleX() * 0.2;
               break;
             case 1:
               context.strokeStyle = "#f00";
