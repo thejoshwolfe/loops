@@ -12,6 +12,12 @@ enum GameState {
 }
 let game_state = GameState.Playing;
 
+enum ColorRules {
+  Single,
+  TwoSeparate,
+  TwoOverlap,
+}
+
 type Coord = {x:number, y:number};
 type Vector = {tile_index:number, direction:number};
 type Tile = {colors:number[]};
@@ -21,19 +27,35 @@ abstract class Level {
   tiles_per_row: number;
   tiles_per_column: number;
   color_count: number;
+  allow_overlap: boolean;
   tiles: Tile[];
-  constructor(force_grid_visible: boolean, tiles_per_row: number, tiles_per_column: number, color_count: number, tiles?: Tile[]) {
+  constructor(force_grid_visible: boolean, tiles_per_row: number, tiles_per_column: number, color_rules: ColorRules, tiles?: Tile[]) {
     this.force_grid_visible = force_grid_visible;
     this.tiles_per_row = tiles_per_row;
     this.tiles_per_column = tiles_per_column;
-    this.color_count = color_count;
+    switch (color_rules) {
+      case ColorRules.Single:
+        this.color_count = 1;
+        this.allow_overlap = false; // doesn't matter
+        break;
+      case ColorRules.TwoSeparate:
+        this.color_count = 2;
+        this.allow_overlap = false;
+        break;
+      case ColorRules.TwoOverlap:
+        this.color_count = 2;
+        this.allow_overlap = true;
+        break;
+      default: throw new AssertionFailure();
+    }
+
     if (tiles) {
       this.tiles = tiles;
     } else {
       this.tiles = [];
       for (let i = 0; i < tiles_per_row * tiles_per_column; i++) {
         let colors = [];
-        for (let color_index = 0; color_index < color_count; color_index++) {
+        for (let color_index = 0; color_index < this.color_count; color_index++) {
           colors.push(0);
         }
         this.tiles.push({colors});
@@ -42,7 +64,7 @@ abstract class Level {
 
     assert(tiles_per_row * tiles_per_column === this.tiles.length);
     for (let tile of this.tiles) {
-      assert(tile.colors.length === color_count);
+      assert(tile.colors.length === this.color_count);
     }
   }
 
@@ -849,21 +871,21 @@ function loadNewLevel() {
 function getLevelNumber(level_number: number) {
   switch (level_number) {
     case 1:
-      return new SquareLevel(true, 4, 4, 1, oneColor([
+      return new SquareLevel(true, 4, 4, ColorRules.Single, oneColor([
         0, 0, 0, 0,
         0, 6, 1, 0,
         0, 6, 2, 0,
         0, 0, 0, 0,
       ]));
     case 2:
-      return new SquareLevel(true, 5, 4, 1, oneColor([
+      return new SquareLevel(true, 5, 4, ColorRules.Single, oneColor([
         0, 0, 0, 0, 0,
         0, 6,14,12, 0,
         0, 3, 9, 4, 0,
         0, 0, 0, 0, 0,
       ]));
     case 3:
-      return new SquareLevel(true, 5, 5, 1, oneColor([
+      return new SquareLevel(true, 5, 5, ColorRules.Single, oneColor([
         0, 0, 0, 0, 0,
         0, 2, 3, 4, 0,
         0, 2, 1, 5, 0,
@@ -871,33 +893,46 @@ function getLevelNumber(level_number: number) {
         0, 0, 0, 0, 0,
       ]));
     case 4:
-      return generateLevel(new SquareLevel(true, 7, 7, 1));
+      return generateLevel(new SquareLevel(true, 7, 7, ColorRules.Single));
     case 5:
-      return generateLevel(new SquareLevel(false, 8, 8, 1));
+      return generateLevel(new SquareLevel(false, 8, 8, ColorRules.Single));
     case 6:
-      return generateLevel(new HexagonLevel(true, 5, 5, 1));
+      return generateLevel(new HexagonLevel(true, 5, 5, ColorRules.Single));
     case 7:
-      return generateLevel(new HexagonLevel(true, 6, 6, 1));
+      return generateLevel(new HexagonLevel(true, 6, 6, ColorRules.Single));
     case 8:
-      return generateLevel(new HexagonLevel(true, 7, 7, 1));
+      return generateLevel(new HexagonLevel(true, 7, 7, ColorRules.Single));
     case 9:
-      return generateLevel(new HexagonLevel(false, 8, 8, 1));
+      return generateLevel(new HexagonLevel(false, 8, 8, ColorRules.Single));
     case 10:
-      return generateLevel(new SquareLevel(true, 7, 7, 2));
+      return generateLevel(new SquareLevel(true, 7, 7, ColorRules.TwoSeparate));
     case 11:
-      return generateLevel(new SquareLevel(true, 9, 9, 2));
+      return generateLevel(new SquareLevel(true, 9, 9, ColorRules.TwoSeparate));
     case 12:
-      return generateLevel(new HexagonLevel(true, 6, 6, 2));
+      return generateLevel(new HexagonLevel(true, 6, 6, ColorRules.TwoSeparate));
     case 13:
-      return generateLevel(new HexagonLevel(true, 8, 8, 2));
-    default: {
-      let color_count = (level_number & 2) ? 2 : 1;
-      if (level_number & 1) {
-        return generateLevel(new HexagonLevel(false, 9, 9, color_count));
-      } else {
-        return generateLevel(new SquareLevel(false, 10, 10, color_count));
-      }
-    }
+      return generateLevel(new HexagonLevel(true, 8, 8, ColorRules.TwoSeparate));
+    case 14:
+      return generateLevel(new SquareLevel(true, 9, 9, ColorRules.TwoOverlap));
+    case 15:
+      return generateLevel(new HexagonLevel(true, 8, 8, ColorRules.TwoOverlap));
+  }
+  // loop
+  switch ((level_number - 16) % 6) {
+    case 0:
+      return generateLevel(new SquareLevel(false, 10, 10, ColorRules.Single));
+    case 1:
+      return generateLevel(new HexagonLevel(false, 9, 9, ColorRules.Single));
+    case 2:
+      return generateLevel(new SquareLevel(false, 10, 10, ColorRules.TwoSeparate));
+    case 3:
+      return generateLevel(new HexagonLevel(false, 9, 9, ColorRules.TwoSeparate));
+    case 4:
+      return generateLevel(new SquareLevel(false, 10, 10, ColorRules.TwoOverlap));
+    case 5:
+      return generateLevel(new HexagonLevel(false, 9, 9, ColorRules.TwoOverlap));
+    default:
+      throw new AssertionFailure();
   }
 }
 
@@ -911,14 +946,21 @@ function oneColor(values: number[]): Tile[] {
 
 function generateLevel(level: Level): Level {
   // generate a solved puzzle
+  assert(level.color_count <= 2);
+  let possible_edge_values = (
+    level.color_count === 1 ? 2 :
+    level.allow_overlap     ? 4 : 3
+  );
   for (let vector of level.allEdges()) {
     if (!level.isInBounds(vector.tile_index)) continue;
     const other_tile = level.getTileIndexFromVector(vector.tile_index, vector.direction);
     if (!level.isInBounds(other_tile)) continue;
+    let edge_value = Math.floor(Math.random() * possible_edge_values);
     for (let color_index = 0; color_index < level.color_count; color_index++) {
-      if (Math.random() < 0.5) continue;
-      level.tiles[vector.tile_index].colors[color_index] |= vector.direction;
-      level.tiles[other_tile].colors[color_index] |= level.reverseDirection(vector.direction);
+      if (edge_value & (1 << color_index)) {
+        level.tiles[vector.tile_index].colors[color_index] |= vector.direction;
+        level.tiles[other_tile].colors[color_index] |= level.reverseDirection(vector.direction);
+      }
     }
   }
 
