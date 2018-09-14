@@ -18,6 +18,12 @@ enum ColorRules {
   TwoOverlap,
 }
 
+enum EndpointStyle {
+  LargeRing,
+  SmallRing,
+  LargeDot,
+}
+
 type Coord = {x:number, y:number};
 type Vector = {tile_index:number, direction:number};
 type Tile = {colors:number[]};
@@ -70,6 +76,7 @@ abstract class Level {
 
   abstract getScaleX(): number;
   abstract getScaleY(): number;
+  abstract getTileAnimationTime(): number;
 
   abstract getTileIndexFromDisplayPoint(display_x: number, display_y: number): number;
   abstract getTileIndexFromCoord(x: number, y: number): number;
@@ -81,7 +88,7 @@ abstract class Level {
   abstract rotateTile(tile_index: number): boolean;
   abstract rotateRandomly(tile_index: number): void;
   abstract renderGridLines(context: CanvasRenderingContext2D): void;
-  abstract renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number, animation_progress: number): void;
+  abstract renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number, animation_progress: number, endpoint_style: EndpointStyle): void;
 
   isInBounds(tile_index: number): boolean {
     const {x, y} = this.getTileCoordFromIndex(tile_index);
@@ -121,35 +128,57 @@ abstract class Level {
       context.stroke();
     }
 
-    context.lineCap = "round";
-    context.lineJoin = "round";
     for (let color_index = 0; color_index < this.color_count; color_index++) {
       // select an appropriate line style and color
-      switch (this.color_count) {
-        case 1:
-          context.strokeStyle = "#000";
-          context.lineWidth = level.getScaleX() * 0.1;
-          break;
-        case 2:
-          switch (color_index) {
-            case 0:
-              context.strokeStyle = "#88f";
-              context.lineWidth = level.getScaleX() * 0.2;
-              break;
-            case 1:
-              context.strokeStyle = "#f00";
-              context.lineWidth = level.getScaleX() * 0.075;
-              break;
-            default: throw new AssertionFailure();
-          }
-          break;
-        default: throw new AssertionFailure();
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      let endpoint_style: EndpointStyle;
+      if (this.color_count === 1) {
+        context.strokeStyle = "#000";
+        context.lineWidth = level.getScaleX() * 0.1;
+        endpoint_style = EndpointStyle.LargeRing;
+      } else if (this.color_count === 2 && !this.allow_overlap) {
+        switch (color_index) {
+          case 0:
+            context.strokeStyle = "#99f";
+            context.lineWidth = level.getScaleX() * 0.2;
+            endpoint_style = EndpointStyle.LargeDot;
+            context.fillStyle = context.strokeStyle;
+            break;
+          case 1:
+            context.strokeStyle = "#c06";
+            context.lineWidth = level.getScaleX() * 0.075;
+            endpoint_style = EndpointStyle.SmallRing;
+            break;
+          default: throw new AssertionFailure();
+        }
+      } else if (this.color_count === 2 && this.allow_overlap) {
+        switch (color_index) {
+          case 0:
+            context.strokeStyle = "#5ec";
+            context.lineWidth = level.getScaleX() * 0.4;
+            context.lineCap = "butt";
+            context.lineJoin = "miter";
+            endpoint_style = EndpointStyle.LargeDot;
+            context.fillStyle = context.strokeStyle;
+            break;
+          case 1:
+            context.strokeStyle = "#a50";
+            context.lineWidth = level.getScaleX() * 0.075;
+            endpoint_style = EndpointStyle.LargeRing;
+            break;
+          default: throw new AssertionFailure();
+        }
+      } else {
+        throw new AssertionFailure();
       }
+
       for (let location of this.allTileIndexes()) {
         const {x, y} = this.getTileCoordFromIndex(location);
         const color_value = this.tiles[location].colors[color_index];
         let tile_rotation_animation = tile_rotation_animations[location];
-        this.renderTile(context, color_value, x, y, tile_rotation_animation ? tile_rotation_animation.rotation : 0);
+        let animation_progress = tile_rotation_animation ? tile_rotation_animation.rotation : 0;
+        this.renderTile(context, color_value, x, y, animation_progress, endpoint_style);
       }
     }
   }
@@ -164,6 +193,7 @@ class SquareLevel extends Level {
 
   getScaleX() { return 1; }
   getScaleY() { return 1; }
+  getTileAnimationTime() { return 150; }
 
   getTileIndexFromDisplayPoint(display_x: number, display_y: number): number {
     return this.getTileIndexFromCoord(Math.floor(display_x), Math.floor(display_y));
@@ -255,7 +285,7 @@ class SquareLevel extends Level {
     }
   }
 
-  renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number, animation_progress: number) {
+  renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number, animation_progress: number, endpoint_style: EndpointStyle) {
     if (color_value === 0) return;
     context.save();
     try {
@@ -285,10 +315,31 @@ class SquareLevel extends Level {
 
       switch (color_value) {
         case 1:
-          context.beginPath();
-          context.arc(0, 0, 0.25, 0, 2*pi);
-          context.lineTo(0.5, 0);
-          context.stroke();
+          switch (endpoint_style) {
+            case EndpointStyle.LargeRing:
+              context.beginPath();
+              context.arc(0, 0, 0.25, 0, 2*pi);
+              context.lineTo(0.5, 0);
+              context.stroke();
+              break;
+            case EndpointStyle.SmallRing:
+              context.beginPath();
+              context.arc(0, 0, 0.15, 0, 2*pi);
+              context.lineTo(0.5, 0);
+              context.stroke();
+              break;
+            case EndpointStyle.LargeDot:
+              context.beginPath();
+              context.arc(0, 0, 0.25, 0, 2*pi);
+              context.fill();
+
+              context.beginPath();
+              context.moveTo(0, 0);
+              context.lineTo(0.5, 0);
+              context.stroke();
+              break;
+            default: throw new AssertionFailure();
+          }
           break;
         case 3:
           context.beginPath();
@@ -354,6 +405,7 @@ class HexagonLevel extends Level {
 
   getScaleX() { return 1.5; }
   getScaleY() { return sqrt3; }
+  getTileAnimationTime() { return 120; }
 
   getTileIndexFromDisplayPoint(display_x: number, display_y: number): number {
     // we could do some fancy math to figure out which space it is.
@@ -501,7 +553,7 @@ class HexagonLevel extends Level {
     }
   }
 
-  renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number, animation_progress: number) {
+  renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number, animation_progress: number, endpoint_style: EndpointStyle) {
     if (color_value === 0) return;
     context.save();
     try {
@@ -595,10 +647,31 @@ class HexagonLevel extends Level {
       switch (color_value) {
         case 1:
           context.rotate(pi/6);
-          context.beginPath();
-          context.arc(0, 0, 0.5, 0, 2*pi);
-          context.lineTo(sqrt3 / 2, 0);
-          context.stroke();
+          switch (endpoint_style) {
+            case EndpointStyle.LargeRing:
+              context.beginPath();
+              context.arc(0, 0, 0.5, 0, 2*pi);
+              context.lineTo(sqrt3 / 2, 0);
+              context.stroke();
+              break;
+            case EndpointStyle.SmallRing:
+              context.beginPath();
+              context.arc(0, 0, 0.33, 0, 2*pi);
+              context.lineTo(sqrt3 / 2, 0);
+              context.stroke();
+              break;
+            case EndpointStyle.LargeDot:
+              context.beginPath();
+              context.arc(0, 0, 0.5, 0, 2*pi);
+              context.fill();
+
+              context.beginPath();
+              context.moveTo(0, 0);
+              context.lineTo(sqrt3 / 2, 0);
+              context.stroke();
+              break;
+            default: throw new AssertionFailure();
+          }
           break;
         case 3:
           context.beginPath();
@@ -691,7 +764,7 @@ class HexagonLevel extends Level {
   }
 }
 
-let level_number = 0;
+let level_number = 1;
 let level: Level;
 function loadLevel(new_level: Level) {
   level = new_level;
@@ -717,6 +790,7 @@ canvas.addEventListener("mousedown", function(event: MouseEvent) {
 let tile_rotation_animations: {[index:number]:{rotation:number,cancelled:boolean}} = {};
 function animateIntoRotation(tile_index: number) {
   const start_time = new Date().getTime();
+  const total_time = level.getTileAnimationTime();
   let existing_animation = tile_rotation_animations[tile_index];
   if (existing_animation) existing_animation.cancelled = true;
   let animation = {rotation: -1, cancelled: false};
@@ -724,7 +798,7 @@ function animateIntoRotation(tile_index: number) {
   requestAnimationFrame(animate);
   function animate() {
     if (animation.cancelled) return;
-    const time_progress = (new Date().getTime() - start_time) / 150;
+    const time_progress = (new Date().getTime() - start_time) / total_time;
     if (time_progress >= 1) {
       delete tile_rotation_animations[tile_index];
       renderEverything();
@@ -849,6 +923,7 @@ function beginLevelTransition() {
       global_alpha = 1 - progress;
     } else if (progress < 2) {
       if (game_state === GameState.FadeOut) {
+        level_number++;
         loadNewLevel();
         game_state = GameState.FadeIn;
       }
@@ -865,7 +940,6 @@ function beginLevelTransition() {
   }
 }
 function loadNewLevel() {
-  level_number += 1;
   loadLevel(getLevelNumber(level_number));
 }
 function getLevelNumber(level_number: number) {
