@@ -817,8 +817,8 @@ let scale = 100;
 let origin_x = -50;
 let origin_y = -50;
 function handleResize() {
-  canvas.width = document.documentElement.clientWidth;
-  canvas.height = document.documentElement.clientHeight - footer.clientHeight;
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight - footer.clientHeight;
   buffer_canvas.width = canvas.width;
   buffer_canvas.height = canvas.height;
 
