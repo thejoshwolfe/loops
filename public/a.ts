@@ -1,3 +1,5 @@
+let level_number = 1;
+
 const canvas = document.getElementById("canvas")! as HTMLCanvasElement;
 const footer = document.getElementById("footer")!;
 const buffer_canvas = document.createElement("canvas");
@@ -171,7 +173,7 @@ abstract class Level {
             context.fillStyle = "#eee";
             break;
           case 4:
-            context.fillStyle = "#aaa";
+            context.fillStyle = "#ccc";
             break;
           default: throw new AssertionFailure();
         }
@@ -207,7 +209,7 @@ abstract class Level {
       } else if (this.color_count === 2 && this.allow_overlap) {
         switch (color_index) {
           case 0:
-            context.strokeStyle = "#5ec";
+            context.strokeStyle = "#e784e1";
             context.lineWidth = level.getScaleX() * 0.4;
             context.lineCap = "butt";
             context.lineJoin = "miter";
@@ -215,7 +217,7 @@ abstract class Level {
             context.fillStyle = context.strokeStyle;
             break;
           case 1:
-            context.strokeStyle = "#a50";
+            context.strokeStyle = "#000caa";
             context.lineWidth = level.getScaleX() * 0.075;
             endpoint_style = EndpointStyle.LargeRing;
             break;
@@ -838,7 +840,6 @@ class HexagonLevel extends Level {
   }
 }
 
-let level_number = 1;
 let level: Level;
 function loadLevel(new_level: Level) {
   level = new_level;
