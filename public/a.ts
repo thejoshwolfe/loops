@@ -32,13 +32,17 @@ abstract class Level {
   force_grid_visible: boolean;
   tiles_per_row: number;
   tiles_per_column: number;
+  cement_states: {[tile_index:number]: number} | null;
   color_count: number;
   allow_overlap: boolean;
   tiles: Tile[];
-  constructor(force_grid_visible: boolean, tiles_per_row: number, tiles_per_column: number, color_rules: ColorRules, tiles?: Tile[]) {
+
+  constructor(force_grid_visible: boolean, tiles_per_row: number, tiles_per_column: number, cement_mode: boolean, color_rules: ColorRules, tiles?: Tile[]) {
     this.force_grid_visible = force_grid_visible;
     this.tiles_per_row = tiles_per_row;
     this.tiles_per_column = tiles_per_column;
+    this.cement_states = cement_mode ? {} : null;
+
     switch (color_rules) {
       case ColorRules.Single:
         this.color_count = 1;
@@ -85,10 +89,11 @@ abstract class Level {
   abstract allEdges(): Vector[];
   abstract getTileIndexFromVector(tile_index: number, direction: number): number;
   abstract reverseDirection(direction: number): number;
-  abstract rotateTile(tile_index: number): boolean;
+  abstract rotateTile(tile_index: number): void;
   abstract rotateRandomly(tile_index: number): void;
   abstract renderGridLines(context: CanvasRenderingContext2D): void;
   abstract renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number, animation_progress: number, endpoint_style: EndpointStyle): void;
+  abstract renderTileBackground(context: CanvasRenderingContext2D, x: number, y: number): void;
 
   isInBounds(tile_index: number): boolean {
     const {x, y} = this.getTileCoordFromIndex(tile_index);
@@ -96,6 +101,30 @@ abstract class Level {
       1 <= x && x < this.tiles_per_row - 1 &&
       1 <= y && y < this.tiles_per_column - 1
     );
+  }
+
+  touchCement(tile_index: number): boolean {
+    if (this.cement_states == null) return true;
+    // cement is enabled
+    let age = this.cement_states[tile_index];
+    if (age === undefined) {
+      this.cement_states[tile_index] = 0;
+    } else if (age >= 4) {
+      // sry bruh
+      return false;
+    } else if (age === 1) {
+      // allow multiple clicks on the same tile without advancing time.
+      return true;
+    } else {
+      // clicking on drying cement resets it, but everything else still drys.
+      this.cement_states[tile_index] = 0;
+    }
+    for (let k in this.cement_states) {
+      if (this.cement_states[k] < 4) {
+        this.cement_states[k]++;
+      }
+    }
+    return true;
   }
 
   countUnsolved(): number {
@@ -126,6 +155,29 @@ abstract class Level {
       context.beginPath();
       this.renderGridLines(context);
       context.stroke();
+    }
+
+    // cement background
+    if (level.cement_states != null) {
+      for (let location of this.allTileIndexes()) {
+        var age = level.cement_states[location];
+        if (age === undefined) continue;
+        switch (age) {
+          case undefined:
+          case 1:
+            continue;
+          case 2:
+          case 3:
+            context.fillStyle = "#eee";
+            break;
+          case 4:
+            context.fillStyle = "#aaa";
+            break;
+          default: throw new AssertionFailure();
+        }
+        const {x, y} = this.getTileCoordFromIndex(location);
+        this.renderTileBackground(context, x, y);
+      }
     }
 
     for (let color_index = 0; color_index < this.color_count; color_index++) {
@@ -253,14 +305,12 @@ class SquareLevel extends Level {
     );
   }
 
-  rotateTile(tile_index: number): boolean {
-    if (!this.isInBounds(tile_index)) return false;
+  rotateTile(tile_index: number) {
     for (let color_index = 0; color_index < this.color_count; color_index++) {
       let color_value = this.tiles[tile_index].colors[color_index];
       color_value = 0xf & ((color_value << 1) | (color_value >> 3));
       this.tiles[tile_index].colors[color_index] = color_value;
     }
-    return true;
   }
 
   rotateRandomly(tile_index: number) {
@@ -380,6 +430,10 @@ class SquareLevel extends Level {
     } finally {
       context.restore();
     }
+  }
+
+  renderTileBackground(context: CanvasRenderingContext2D, x: number, y: number) {
+    context.fillRect(x, y, 1, 1);
   }
 }
 
@@ -507,14 +561,12 @@ class HexagonLevel extends Level {
     );
   }
 
-  rotateTile(tile_index: number): boolean {
-    if (!this.isInBounds(tile_index)) return false;
+  rotateTile(tile_index: number) {
     for (let color_index = 0; color_index < this.color_count; color_index++) {
       let color_value = this.tiles[tile_index].colors[color_index];
       color_value = 0x3f & ((color_value << 1) | (color_value >> 5));
       this.tiles[tile_index].colors[color_index] = color_value;
     }
-    return true;
   }
 
   rotateRandomly(tile_index: number) {
@@ -762,6 +814,28 @@ class HexagonLevel extends Level {
       context.restore();
     }
   }
+
+  renderTileBackground(context: CanvasRenderingContext2D, x: number, y: number) {
+    context.save();
+    try {
+      if (x & 1) {
+        context.translate(1.5 * x + 1, sqrt3 * (y + 1.0));
+      } else {
+        context.translate(1.5 * x + 1, sqrt3 * (y + 0.5));
+      }
+      context.beginPath();
+      context.moveTo(-0.5, -sqrt3/2);
+      context.lineTo(0.5, -sqrt3/2);
+      context.lineTo(1, 0);
+      context.lineTo(0.5, sqrt3/2);
+      context.lineTo(-0.5, sqrt3/2);
+      context.lineTo(-1, 0);
+      context.lineTo(-0.5, -sqrt3/2);
+      context.fill();
+    } finally {
+      context.restore();
+    }
+  }
 }
 
 let level_number = 1;
@@ -783,8 +857,8 @@ canvas.addEventListener("mousedown", function(event: MouseEvent) {
   const display_y = (event.y - origin_y) / scale;
 
   const tile_index = level.getTileIndexFromDisplayPoint(display_x, display_y);
+  if (!rotateTile(tile_index)) return;
   animateIntoRotation(tile_index);
-  rotateTile(tile_index);
 });
 
 let tile_rotation_animations: {[index:number]:{rotation:number,cancelled:boolean}} = {};
@@ -874,8 +948,10 @@ const cheatcode_sequence = [
   6, 5, 6, 5, 9, 10, 9,
 ];
 let cheatcode_index = 0;
-function rotateTile(tile_index: number) {
-  if (!level.rotateTile(tile_index)) return;
+function rotateTile(tile_index: number): boolean {
+  if (!level.isInBounds(tile_index)) return false;
+  if (!level.touchCement(tile_index)) return false;
+  level.rotateTile(tile_index);
 
   renderEverything();
 
@@ -893,7 +969,7 @@ function rotateTile(tile_index: number) {
           }
           loadNewLevel();
         }, 0);
-        return;
+        return false;
       }
     } else {
       // nope
@@ -902,6 +978,8 @@ function rotateTile(tile_index: number) {
   }
 
   checkForDone();
+
+  return true;
 }
 
 function checkForDone() {
@@ -945,21 +1023,21 @@ function loadNewLevel() {
 function getLevelNumber(level_number: number) {
   switch (level_number) {
     case 1:
-      return new SquareLevel(true, 4, 4, ColorRules.Single, oneColor([
+      return new SquareLevel(true, 4, 4, false, ColorRules.Single, oneColor([
         0, 0, 0, 0,
         0, 6, 1, 0,
         0, 6, 2, 0,
         0, 0, 0, 0,
       ]));
     case 2:
-      return new SquareLevel(true, 5, 4, ColorRules.Single, oneColor([
+      return new SquareLevel(true, 5, 4, false, ColorRules.Single, oneColor([
         0, 0, 0, 0, 0,
         0, 6,14,12, 0,
         0, 3, 9, 4, 0,
         0, 0, 0, 0, 0,
       ]));
     case 3:
-      return new SquareLevel(true, 5, 5, ColorRules.Single, oneColor([
+      return new SquareLevel(true, 5, 5, false, ColorRules.Single, oneColor([
         0, 0, 0, 0, 0,
         0, 2, 3, 4, 0,
         0, 2, 1, 5, 0,
@@ -967,44 +1045,44 @@ function getLevelNumber(level_number: number) {
         0, 0, 0, 0, 0,
       ]));
     case 4:
-      return generateLevel(new SquareLevel(true, 7, 7, ColorRules.Single));
+      return generateLevel(new SquareLevel(true, 7, 7, false, ColorRules.Single));
     case 5:
-      return generateLevel(new SquareLevel(false, 8, 8, ColorRules.Single));
+      return generateLevel(new SquareLevel(false, 8, 8, false, ColorRules.Single));
     case 6:
-      return generateLevel(new HexagonLevel(true, 5, 5, ColorRules.Single));
+      return generateLevel(new HexagonLevel(true, 5, 5, false, ColorRules.Single));
     case 7:
-      return generateLevel(new HexagonLevel(true, 6, 6, ColorRules.Single));
+      return generateLevel(new HexagonLevel(true, 6, 6, false, ColorRules.Single));
     case 8:
-      return generateLevel(new HexagonLevel(true, 7, 7, ColorRules.Single));
+      return generateLevel(new HexagonLevel(true, 7, 7, false, ColorRules.Single));
     case 9:
-      return generateLevel(new HexagonLevel(false, 8, 8, ColorRules.Single));
+      return generateLevel(new HexagonLevel(false, 8, 8, false, ColorRules.Single));
     case 10:
-      return generateLevel(new SquareLevel(true, 7, 7, ColorRules.TwoSeparate));
+      return generateLevel(new SquareLevel(true, 7, 7, false, ColorRules.TwoSeparate));
     case 11:
-      return generateLevel(new SquareLevel(true, 9, 9, ColorRules.TwoSeparate));
+      return generateLevel(new SquareLevel(true, 9, 9, false, ColorRules.TwoSeparate));
     case 12:
-      return generateLevel(new HexagonLevel(true, 6, 6, ColorRules.TwoSeparate));
+      return generateLevel(new HexagonLevel(true, 6, 6, false, ColorRules.TwoSeparate));
     case 13:
-      return generateLevel(new HexagonLevel(true, 8, 8, ColorRules.TwoSeparate));
+      return generateLevel(new HexagonLevel(true, 8, 8, false, ColorRules.TwoSeparate));
     case 14:
-      return generateLevel(new SquareLevel(true, 9, 9, ColorRules.TwoOverlap));
+      return generateLevel(new SquareLevel(true, 9, 9, false, ColorRules.TwoOverlap));
     case 15:
-      return generateLevel(new HexagonLevel(true, 8, 8, ColorRules.TwoOverlap));
+      return generateLevel(new HexagonLevel(true, 8, 8, false, ColorRules.TwoOverlap));
   }
   // loop
   switch ((level_number - 16) % 6) {
     case 0:
-      return generateLevel(new SquareLevel(false, 10, 10, ColorRules.Single));
+      return generateLevel(new SquareLevel(false, 10, 10, true, ColorRules.Single));
     case 1:
-      return generateLevel(new HexagonLevel(false, 9, 9, ColorRules.Single));
+      return generateLevel(new HexagonLevel(false, 9, 9, true, ColorRules.Single));
     case 2:
-      return generateLevel(new SquareLevel(false, 10, 10, ColorRules.TwoSeparate));
+      return generateLevel(new SquareLevel(false, 10, 10, true, ColorRules.TwoSeparate));
     case 3:
-      return generateLevel(new HexagonLevel(false, 9, 9, ColorRules.TwoSeparate));
+      return generateLevel(new HexagonLevel(false, 9, 9, true, ColorRules.TwoSeparate));
     case 4:
-      return generateLevel(new SquareLevel(false, 10, 10, ColorRules.TwoOverlap));
+      return generateLevel(new SquareLevel(false, 10, 10, true, ColorRules.TwoOverlap));
     case 5:
-      return generateLevel(new HexagonLevel(false, 9, 9, ColorRules.TwoOverlap));
+      return generateLevel(new HexagonLevel(false, 9, 9, true, ColorRules.TwoOverlap));
     default:
       throw new AssertionFailure();
   }
