@@ -1,8 +1,11 @@
 let level_number = 1;
 
 const canvas = document.getElementById("canvas")! as HTMLCanvasElement;
-const footer = document.getElementById("footer")!;
 const buffer_canvas = document.createElement("canvas");
+const sidebar_tray = document.getElementById("sidebar")!;
+const sidebar_button = document.getElementById("hambuger")!;
+const retry_button = document.getElementById("retryButton")!;
+const reset_button = document.getElementById("resetButton")!;
 
 const pi = Math.PI;
 const sqrt3 = Math.sqrt(3);
@@ -162,7 +165,7 @@ abstract class Level {
     // cement background
     if (level.cement_states != null) {
       for (let location of this.allTileIndexes()) {
-        var age = level.cement_states[location];
+        let age = level.cement_states[location];
         if (age === undefined) continue;
         switch (age) {
           case undefined:
@@ -849,10 +852,41 @@ function loadLevel(new_level: Level) {
 window.addEventListener("resize", function() {
   handleResize();
 });
+
+function isSidebarShowing(): boolean {
+  return sidebar_button.classList.contains("active");
+}
+function showSidebar() {
+  sidebar_button.classList.add("active");
+  sidebar_tray.classList.add("active");
+}
+function hideSidebar() {
+  sidebar_button.classList.remove("active");
+  sidebar_tray.classList.remove("active");
+}
+
+sidebar_button.addEventListener("mousedown", function(event: MouseEvent) {
+  if (event.altKey || event.ctrlKey || event.shiftKey) return;
+  if (event.button !== 0) return;
+  if (isSidebarShowing()) {
+    hideSidebar();
+  } else {
+    showSidebar();
+  }
+});
+window.addEventListener("keydown", function(event: KeyboardEvent) {
+  if (isSidebarShowing() && event.keyCode === 27) {
+    hideSidebar();
+  }
+});
 canvas.addEventListener("mousedown", function(event: MouseEvent) {
   if (event.altKey || event.ctrlKey || event.shiftKey) return;
   if (event.button !== 0) return;
   event.preventDefault();
+  if (isSidebarShowing()) {
+    hideSidebar();
+    return;
+  }
   if (!(game_state === GameState.Playing || game_state === GameState.FadeIn)) return;
   const display_x = (event.x - origin_x) / scale;
   const display_y = (event.y - origin_y) / scale;
@@ -893,7 +927,7 @@ let origin_x = -50;
 let origin_y = -50;
 function handleResize() {
   canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight - footer.clientHeight;
+  canvas.height = window.innerHeight;
   buffer_canvas.width = canvas.width;
   buffer_canvas.height = canvas.height;
 
@@ -1132,6 +1166,18 @@ class AssertionFailure {}
 function assert(b: boolean) {
   if (!b) throw new AssertionFailure();
 }
+
+retry_button.addEventListener("click", function() {
+  loadNewLevel();
+  hideSidebar();
+});
+reset_button.addEventListener("click", function() {
+  if (confirm("Really start back at level 1?")) {
+    level_number = 1;
+    loadNewLevel();
+    hideSidebar();
+  }
+});
 
 (function() {
   let save_data_str = window.localStorage.getItem("loops");

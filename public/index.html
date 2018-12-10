@@ -3,16 +3,82 @@
     <title>Loops</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
     <style>
-      * { margin: 0; padding: 0;}
+      * { margin: 0; padding: 0; font-size: 100%; }
       * { -webkit-tap-highlight-color:rgba(0,0,0,0); }
+      * { box-sizing: border-box; }
+
+      #hambuger {
+        position: fixed;
+        z-index: 5;
+        top: 15px;
+        left: 15px;
+        cursor: pointer;
+        -webkit-transition: left 200ms linear;
+                transition: left 200ms linear;
+      }
+
+      #hambuger div {
+        width: 35px;
+        height: 2px;
+        margin-bottom: 8px;
+        background-color: #00DFFC;
+      }
+      /* move over */
+      #hambuger.active { left: 230px; }
+      #hambuger.active div { background-color: #343838; }
+      /* turn into an X */
+      #hambuger.active #top {
+        -webkit-transform: translateY(10px) rotate(-135deg);
+            -ms-transform: translateY(10px) rotate(-135deg);
+                transform: translateY(10px) rotate(-135deg);
+      }
+      #hambuger.active #middle {
+        -webkit-transform: scale(0);
+            -ms-transform: scale(0);
+                transform: scale(0);
+      }
+      #hambuger.active #bottom {
+        -webkit-transform: translateY(-10px) rotate(-45deg);
+            -ms-transform: translateY(-10px) rotate(-45deg);
+                transform: translateY(-10px) rotate(-45deg);
+      }
+
+      #sidebar {
+        position: fixed;
+        z-index: 4;
+        overflow: auto;
+        top: 0px;
+        left: -275px;
+        width: 275px;
+        padding: 20px 0px;
+        height: 100%;
+        background-color: #f6f6f6;
+        color: #343838;
+        font-size: 30px;
+        -webkit-transition: left 200ms linear;
+                transition: left 200ms linear;
+      }
+      /* slide in */
+      #sidebar.active { left: 0px; }
     </style>
   </head>
   <body style="background: #eee">
     <canvas id="canvas"></canvas>
-
-    <div id="footer">
-      Source code: <a href="https://github.com/thejoshwolfe/loops">https://github.com/thejoshwolfe/loops</a>
+    <div id="hambuger">
+      <div id='top'></div>
+      <div id='middle'></div>
+      <div id='bottom'></div>
     </div>
+    <div id="sidebar">
+      <div>&nbsp;</div>
+      <div><button id="retryButton">Retry Level</button></div>
+      <div>&nbsp;</div>
+      <div><button id="resetButton">Erase Progress</button></div>
+      <div>&nbsp;</div>
+      <div>&nbsp;</div>
+      <div><a href="https://github.com/thejoshwolfe/loops">source code</a></div>
+    </div>
+
     <script src="a.js"></script>
   </body>
 </html>
