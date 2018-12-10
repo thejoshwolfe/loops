@@ -1019,9 +1019,10 @@ function beginLevelTransition() {
   }
 }
 function loadNewLevel() {
-  loadLevel(getLevelNumber(level_number));
+  loadLevel(getLevelForNumber(level_number));
+  window.localStorage.setItem("loops", JSON.stringify({"level_number": level_number}));
 }
-function getLevelNumber(level_number: number) {
+function getLevelForNumber(level_number: number): Level {
   switch (level_number) {
     case 1:
       return new SquareLevel(true, 4, 4, false, ColorRules.Single, oneColor([
@@ -1132,4 +1133,11 @@ function assert(b: boolean) {
   if (!b) throw new AssertionFailure();
 }
 
-loadNewLevel();
+(function() {
+  let save_data_str = window.localStorage.getItem("loops");
+  if (save_data_str) {
+    let save_data = JSON.parse(save_data_str);
+    level_number = save_data.level_number;
+  }
+  loadNewLevel();
+})();
