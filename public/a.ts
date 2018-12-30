@@ -611,8 +611,18 @@ class HexagonLevel extends Level {
   }
 
   renderGridLines(context: CanvasRenderingContext2D) {
-    // horizontal squiggles
-    for (let y = 0; y <= this.tiles_per_column; y++) {
+    if (this.toroidal) {
+      var top = -this.tiles_per_column;
+      var bottom = 2 * this.tiles_per_column;
+      var left = -(this.tiles_per_row & ~1);
+      var right = 2 * this.tiles_per_row;
+    } else {
+      top = 0;
+      bottom = this.tiles_per_column;
+      left = 0;
+      right = this.tiles_per_row;
+    }
+    for (let y = top; y <= bottom; y++) {
       // the repeating pattern is:
       //   __
       //  /  \__
@@ -621,7 +631,7 @@ class HexagonLevel extends Level {
       const high_y = sqrt3 * y;
       const mid_y = sqrt3 * (y + 0.5);
       const low_y = sqrt3 * (y + 1);
-      for (let x = 0; x <= this.tiles_per_row; x += 2) {
+      for (let x = left; x <= right; x += 2) {
         const left_x = 1.5 * x;
         context.moveTo(left_x + 0.5, low_y);
         context.lineTo(left_x + 0.0, mid_y);
@@ -917,8 +927,8 @@ canvas.addEventListener("mousedown", function(event: MouseEvent) {
   const display_x = (event.x - origin_x) / scale;
   const display_y = (event.y - origin_y) / scale;
 
-  const wrapped_display_x = euclideanMod(display_x, level.tiles_per_row);
-  const wrapped_display_y = euclideanMod(display_y, level.tiles_per_column);
+  const wrapped_display_x = euclideanMod(display_x, level.tiles_per_row * level.getScaleX());
+  const wrapped_display_y = euclideanMod(display_y, level.tiles_per_column * level.getScaleY());
   if (!level.toroidal) {
     // make sure the click is in bounds
     if (display_x !== wrapped_display_x || display_y !== wrapped_display_y) return;
@@ -1090,7 +1100,7 @@ function loadNewLevel() {
   save();
 }
 function getLevelForNumber(level_number: number): Level {
-  return generateLevel(new SquareLevel(true, 10, 10, true, ColorRules.TwoSeparate, true));
+  return generateLevel(new HexagonLevel(true, 4, 4, true, ColorRules.TwoSeparate, true));
   switch (level_number) {
     case 1:
       return new SquareLevel(true, 4, 4, false, ColorRules.Single, false, oneColor([
