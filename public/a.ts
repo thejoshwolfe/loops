@@ -347,13 +347,24 @@ class SquareLevel extends Level {
 
   renderGridLines(context: CanvasRenderingContext2D) {
     // straight shots in both directions
-    for (let x = 2; x < this.tiles_per_row - 1; x++) {
-      context.moveTo(x, 1);
-      context.lineTo(x, this.tiles_per_column - 1);
-    }
-    for (let y = 2; y < this.tiles_per_column - 1; y++) {
-      context.moveTo(1, y);
-      context.lineTo(this.tiles_per_row - 1, y);
+    if (this.toroidal) {
+      for (let x = -this.tiles_per_row; x < 2 * this.tiles_per_row; x++) {
+        context.moveTo(x, -this.tiles_per_column);
+        context.lineTo(x, 2 * this.tiles_per_column);
+      }
+      for (let y = -this.tiles_per_column; y < 2 * this.tiles_per_column; y++) {
+        context.moveTo(-this.tiles_per_row, y);
+        context.lineTo(2 * this.tiles_per_row, y);
+      }
+    } else {
+      for (let x = 2; x < this.tiles_per_row - 1; x++) {
+        context.moveTo(x, 1);
+        context.lineTo(x, this.tiles_per_column - 1);
+      }
+      for (let y = 2; y < this.tiles_per_column - 1; y++) {
+        context.moveTo(1, y);
+        context.lineTo(this.tiles_per_row - 1, y);
+      }
     }
   }
 
