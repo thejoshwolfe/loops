@@ -1,4 +1,5 @@
 let level_number = 1;
+let level_retries = 0;
 
 const canvas = document.getElementById("canvas")! as HTMLCanvasElement;
 const buffer_canvas = document.createElement("canvas");
@@ -27,6 +28,13 @@ enum EndpointStyle {
   LargeRing,
   SmallRing,
   LargeDot,
+}
+
+namespace SoundEffects {
+  export const pity = new Audio("audio/pity.mp3");
+  export const ohno = new Audio("audio/ohno.mp3");
+  export const finaly = new Audio("audio/finally.mp3");
+  export const yay = new Audio("audio/yay.mp3");
 }
 
 type Coord = {x:number, y:number};
@@ -138,8 +146,18 @@ abstract class Level {
     for (let {tile_index, direction} of this.allEdges()) {
       for (let color_index = 0; color_index < this.color_count; color_index++) {
         const a = this.getEdgeValue(tile_index, color_index, direction);
-        const b = this.getEdgeValue(this.getTileIndexFromVector(tile_index, direction), color_index, this.reverseDirection(direction));
-        if (a !== b) result += 1;
+        const other_tile_index = this.getTileIndexFromVector(tile_index, direction);
+        const b = this.getEdgeValue(other_tile_index, color_index, this.reverseDirection(direction));
+        if (a !== b) {
+          result += 1;
+
+          // Play "Oh No" if two adjacent tiles freeze in an unsolved state
+          if (level.cement_states != null &&
+              level.cement_states[tile_index]==4 &&
+              level.cement_states[other_tile_index]==4) {
+              SoundEffects.ohno.play();
+          }
+        }
       }
     }
     return result;
@@ -1022,10 +1040,18 @@ function checkForDone() {
   if (unsolved_count === 0) {
     // everything is done
     beginLevelTransition();
+    level_retries = 0;
   }
 }
 let global_alpha = 1.0;
 function beginLevelTransition() {
+  if (level_retries==0) {
+    SoundEffects.yay.play();
+  }
+  else {
+    SoundEffects.finaly.play();
+  }
+
   game_state = GameState.FadeOut;
   const start_time = new Date().getTime();
   animate();
@@ -1168,9 +1194,12 @@ function assert(b: boolean) {
 }
 
 retry_button.addEventListener("click", function() {
+  SoundEffects.pity.play();
+  level_retries++;
   loadNewLevel();
   hideSidebar();
 });
+
 reset_button.addEventListener("click", function() {
   if (confirm("Really start back at level 1?")) {
     level_number = 1;
