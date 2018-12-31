@@ -31,10 +31,26 @@ enum EndpointStyle {
 }
 
 namespace SoundEffects {
-  export const pity = new Audio("audio/pity.mp3");
-  export const ohno = new Audio("audio/ohno.mp3");
-  export const finaly = new Audio("audio/finally.mp3");
-  export const yay = new Audio("audio/yay.mp3");
+  export let enabled = false;
+
+  class CustomPlayer {
+    audio: HTMLAudioElement;
+
+    constructor(src: string) {
+      this.audio = new Audio(src);
+    }
+
+    play() {
+      if (enabled) {
+        this.audio.play();
+      }
+    }
+  }
+
+  export const pity = new CustomPlayer('audio/pity.mp3');
+  export const ohno = new CustomPlayer('audio/ohno.mp3');
+  export const finaly = new CustomPlayer('audio/finally.mp3');
+  export const yay = new CustomPlayer('audio/yay.mp3');
 }
 
 type Coord = {x:number, y:number};
@@ -153,8 +169,8 @@ abstract class Level {
 
           // Play "Oh No" if two adjacent tiles freeze in an unsolved state
           if (level.cement_states != null &&
-              level.cement_states[tile_index]==4 &&
-              level.cement_states[other_tile_index]==4) {
+              level.cement_states[tile_index] == 4 &&
+              level.cement_states[other_tile_index] == 4) {
               SoundEffects.ohno.play();
           }
         }
@@ -1208,8 +1224,20 @@ reset_button.addEventListener("click", function() {
   }
 });
 
-(function() {
-  let save_data_str = window.localStorage.getItem("loops");
+// sound_effects_checkbox.addEventListener('click', function () {
+//   if (confirm('Really start back at level 1?')) {
+//     level_number = 1;
+//     loadNewLevel();
+//     hideSidebar();
+//   }
+// });
+
+function toggleSoundEffects(checkboxElem: HTMLInputElement) {
+  SoundEffects.enabled = checkboxElem.checked;
+}
+
+(function () {
+  let save_data_str = window.localStorage.getItem('loops');
   if (save_data_str) {
     let save_data = JSON.parse(save_data_str);
     level_number = save_data.level_number;
