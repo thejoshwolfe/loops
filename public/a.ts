@@ -7,6 +7,7 @@ const sidebar_tray = document.getElementById("sidebar")!;
 const sidebar_button = document.getElementById("hambuger")!;
 const retry_button = document.getElementById("retryButton")!;
 const reset_button = document.getElementById("resetButton")!;
+const sound_effects_checkbox = document.getElementById("soundEffectsCheckbox")! as HTMLInputElement;
 
 const pi = Math.PI;
 const sqrt3 = Math.sqrt(3);
@@ -1096,7 +1097,7 @@ function beginLevelTransition() {
 }
 function loadNewLevel() {
   loadLevel(getLevelForNumber(level_number));
-  window.localStorage.setItem("loops", JSON.stringify({"level_number": level_number}));
+  save();
 }
 function getLevelForNumber(level_number: number): Level {
   switch (level_number) {
@@ -1224,16 +1225,17 @@ reset_button.addEventListener("click", function() {
   }
 });
 
-// sound_effects_checkbox.addEventListener('click', function () {
-//   if (confirm('Really start back at level 1?')) {
-//     level_number = 1;
-//     loadNewLevel();
-//     hideSidebar();
-//   }
-// });
-
 function toggleSoundEffects(checkboxElem: HTMLInputElement) {
   SoundEffects.enabled = checkboxElem.checked;
+  save();
+}
+
+function save() {
+  const data = {
+    "level_number": level_number,
+    "sound_effects": SoundEffects.enabled
+  };
+  window.localStorage.setItem("loops", JSON.stringify(data));
 }
 
 (function () {
@@ -1241,6 +1243,8 @@ function toggleSoundEffects(checkboxElem: HTMLInputElement) {
   if (save_data_str) {
     let save_data = JSON.parse(save_data_str);
     level_number = save_data.level_number;
+    SoundEffects.enabled = !!save_data.sound_effects;
+    sound_effects_checkbox.checked = SoundEffects.enabled;
   }
   loadNewLevel();
 })();
