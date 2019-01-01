@@ -52,6 +52,9 @@ namespace SoundEffects {
   export const ohno = new CustomPlayer('audio/ohno.mp3');
   export const finaly = new CustomPlayer('audio/finally.mp3');
   export const yay = new CustomPlayer('audio/yay.mp3');
+  export const yes = new CustomPlayer('audio/yes.mp3');
+  export const good = new CustomPlayer('audio/good.mp3');
+  export const way = new CustomPlayer('audio/thats_the_way.mp3');
 }
 
 type Coord = {x:number, y:number};
@@ -1063,7 +1066,14 @@ function checkForDone() {
 let global_alpha = 1.0;
 function beginLevelTransition() {
   if (level_retries==0) {
-    SoundEffects.yay.play();
+    const array = [
+      SoundEffects.yay,
+      SoundEffects.yes,
+      SoundEffects.good,
+      SoundEffects.way,
+    ];
+    const index = Date.now() % array.length;
+    array[index].play();
   }
   else {
     SoundEffects.finaly.play();
