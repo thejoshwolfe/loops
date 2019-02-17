@@ -87,6 +87,8 @@ abstract class Level {
 
   abstract getScaleX(): number;
   abstract getScaleY(): number;
+  abstract getOffsetX(): number;
+  abstract getOffsetY(): number;
   abstract getTileAnimationTime(): number;
 
   abstract getTileIndexFromDisplayPoint(display_x: number, display_y: number): number;
@@ -192,6 +194,7 @@ abstract class Level {
       }
     }
 
+    // tiles
     for (let color_index = 0; color_index < this.color_count; color_index++) {
       // select an appropriate line style and color
       context.lineCap = "round";
@@ -245,6 +248,25 @@ abstract class Level {
         this.renderTiles(context, color_value, x, y, animation_progress, endpoint_style);
       }
     }
+
+    // toroidal guide
+    if (this.toroidal) {
+      let left = this.getOffsetX();
+      let right = left + this.tiles_per_row * this.getScaleX();
+      let top = this.getOffsetY();
+      let bottom = top + this.tiles_per_column * this.getScaleY();
+      context.strokeStyle = "rgba(0,0,0,0.5)";
+      context.lineWidth = 0.05;
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.beginPath();
+      context.moveTo(left, top);
+      context.lineTo(right, top);
+      context.lineTo(right, bottom);
+      context.lineTo(left, bottom);
+      context.lineTo(left, top);
+      context.stroke();
+    }
   }
 
   renderTiles(context: CanvasRenderingContext2D, color_value: number, x: number, y: number, animation_progress: number, endpoint_style: EndpointStyle): void {
@@ -274,6 +296,8 @@ class SquareLevel extends Level {
 
   getScaleX() { return 1; }
   getScaleY() { return 1; }
+  getOffsetX() { return 0; }
+  getOffsetY() { return 0; }
   getTileAnimationTime() { return 150; }
 
   getTileIndexFromDisplayPoint(display_x: number, display_y: number): number {
@@ -492,6 +516,8 @@ class HexagonLevel extends Level {
 
   getScaleX() { return 1.5; }
   getScaleY() { return sqrt3; }
+  getOffsetX() { return -0.5; }
+  getOffsetY() { return 0; }
   getTileAnimationTime() { return 120; }
 
   getTileIndexFromDisplayPoint(display_x: number, display_y: number): number {
@@ -974,11 +1000,11 @@ function handleResize() {
   buffer_canvas.width = canvas.width;
   buffer_canvas.height = canvas.height;
 
-  const display_scale_x = level.getScaleX();
-  const display_scale_y = level.getScaleY();
+  const level_scale_x = level.getScaleX();
+  const level_scale_y = level.getScaleY();
   // cut off half of the border tiles
-  const display_width = display_scale_x * level.getDisplayTileCountX();
-  const display_height = display_scale_y * level.getDisplayTileCountY();
+  const display_width = level_scale_x * level.getDisplayTileCountX();
+  const display_height = level_scale_y * level.getDisplayTileCountY();
 
   const level_aspect_ratio = display_height / display_width;
   const canvas_aspect_ratio = canvas.height / canvas.width;
@@ -987,8 +1013,17 @@ function handleResize() {
     canvas.width / display_width :
     canvas.height / display_height;
 
-  origin_x = canvas.width / 2 - scale * display_scale_x * level.tiles_per_row / 2;
-  origin_y = canvas.height / 2 - scale * display_scale_y * level.tiles_per_column / 2;
+  let center_x = level_scale_x * level.tiles_per_row / 2;
+  let center_y = level_scale_y * level.tiles_per_column / 2;
+  if (level instanceof HexagonLevel && level.toroidal) {
+    // the coordinate system works well in the code,
+    // but it looks slightly off to the human eye.
+    center_x += level.getOffsetX();
+    center_y += level.getOffsetY();
+  }
+
+  origin_x = canvas.width / 2 - scale * center_x;
+  origin_y = canvas.height / 2 - scale * center_y;
 
   renderEverything();
 }
