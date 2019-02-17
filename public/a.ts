@@ -1240,21 +1240,22 @@ function toggleSoundEffects(checkboxElem: HTMLInputElement) {
   save();
 }
 
+function getSaveObject(): {[key:string]:any} {
+  let save_data_str = window.localStorage.getItem('loops');
+  return save_data_str ? JSON.parse(save_data_str) : {};
+}
 function save() {
-  const data = {
-    "level_number": level_number,
-    "sound_effects": SoundEffects.enabled
-  };
-  window.localStorage.setItem("loops", JSON.stringify(data));
+  // preserve any unknown properties
+  let save_data = getSaveObject();
+  save_data.level_number = level_number;
+  save_data.sound_effects = SoundEffects.enabled;
+  window.localStorage.setItem("loops", JSON.stringify(save_data));
 }
 
 (function () {
-  let save_data_str = window.localStorage.getItem('loops');
-  if (save_data_str) {
-    let save_data = JSON.parse(save_data_str);
-    level_number = save_data.level_number;
-    SoundEffects.enabled = !!save_data.sound_effects;
-    sound_effects_checkbox.checked = SoundEffects.enabled;
-  }
+  let save_data = getSaveObject();
+  level_number = save_data.level_number || 1;
+  SoundEffects.enabled = !!save_data.sound_effects;
+  sound_effects_checkbox.checked = SoundEffects.enabled;
   loadNewLevel();
 })();
