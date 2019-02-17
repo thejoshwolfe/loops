@@ -1184,7 +1184,7 @@ function getLevelForNumber(level_number: number): Level {
       return generateLevel(new HexagonLevel(true, 8, 8, false, ColorRules.TwoOverlap, false));
   }
   // loop
-  switch ((level_number - 16) % 6) {
+  switch ((level_number - 16) % 12) {
     case 0:
       return generateLevel(new SquareLevel(false, 10, 10, true, ColorRules.Single, false));
     case 1:
@@ -1197,6 +1197,18 @@ function getLevelForNumber(level_number: number): Level {
       return generateLevel(new SquareLevel(false, 10, 10, true, ColorRules.TwoOverlap, false));
     case 5:
       return generateLevel(new HexagonLevel(false, 9, 9, true, ColorRules.TwoOverlap, false));
+    case 6:
+      return generateLevel(new SquareLevel(false, 6, 6, false, ColorRules.Single, true));
+    case 7:
+      return generateLevel(new HexagonLevel(false, 4, 4, false, ColorRules.Single, true));
+    case 8:
+      return generateLevel(new SquareLevel(false, 6, 6, false, ColorRules.TwoSeparate, true));
+    case 9:
+      return generateLevel(new HexagonLevel(false, 4, 4, false, ColorRules.TwoSeparate, true));
+    case 10:
+      return generateLevel(new SquareLevel(false, 6, 6, false, ColorRules.TwoOverlap, true));
+    case 11:
+      return generateLevel(new HexagonLevel(false, 4, 4, false, ColorRules.TwoOverlap, true));
     default:
       throw new AssertionFailure();
   }
