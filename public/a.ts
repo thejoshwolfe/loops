@@ -3,7 +3,7 @@ let level_number = 1;
 const canvas = document.getElementById("canvas")! as HTMLCanvasElement;
 const buffer_canvas = document.createElement("canvas");
 const sidebar_tray = document.getElementById("sidebar")!;
-const sidebar_button = document.getElementById("hambuger")!;
+const sidebar_button = document.getElementById("hamburger")!;
 const retry_button = document.getElementById("retryButton")!;
 const reset_button = document.getElementById("resetButton")!;
 

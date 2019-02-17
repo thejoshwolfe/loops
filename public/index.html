@@ -7,7 +7,7 @@
       * { -webkit-tap-highlight-color:rgba(0,0,0,0); }
       * { box-sizing: border-box; }
 
-      #hambuger {
+      #hamburger {
         position: fixed;
         z-index: 5;
         top: 15px;
@@ -17,27 +17,27 @@
                 transition: left 200ms linear;
       }
 
-      #hambuger div {
+      #hamburger div {
         width: 35px;
         height: 2px;
         margin-bottom: 8px;
         background-color: #00DFFC;
       }
       /* move over */
-      #hambuger.active { left: 230px; }
-      #hambuger.active div { background-color: #343838; }
+      #hamburger.active { left: 230px; }
+      #hamburger.active div { background-color: #343838; }
       /* turn into an X */
-      #hambuger.active #top {
+      #hamburger.active #top {
         -webkit-transform: translateY(10px) rotate(-135deg);
             -ms-transform: translateY(10px) rotate(-135deg);
                 transform: translateY(10px) rotate(-135deg);
       }
-      #hambuger.active #middle {
+      #hamburger.active #middle {
         -webkit-transform: scale(0);
             -ms-transform: scale(0);
                 transform: scale(0);
       }
-      #hambuger.active #bottom {
+      #hamburger.active #bottom {
         -webkit-transform: translateY(-10px) rotate(-45deg);
             -ms-transform: translateY(-10px) rotate(-45deg);
                 transform: translateY(-10px) rotate(-45deg);
@@ -63,11 +63,12 @@
     </style>
   </head>
   <body style="background: #eee">
+
     <canvas id="canvas"></canvas>
-    <div id="hambuger">
-      <div id='top'></div>
-      <div id='middle'></div>
-      <div id='bottom'></div>
+    <div id="hamburger">
+      <div id="top"></div>
+      <div id="middle"></div>
+      <div id="bottom"></div>
     </div>
     <div id="sidebar">
       <div>&nbsp;</div>
