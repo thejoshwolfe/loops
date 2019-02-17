@@ -1054,7 +1054,7 @@ function beginLevelTransition() {
 }
 function loadNewLevel() {
   loadLevel(getLevelForNumber(level_number));
-  window.localStorage.setItem("loops", JSON.stringify({"level_number": level_number}));
+  save();
 }
 function getLevelForNumber(level_number: number): Level {
   switch (level_number) {
@@ -1178,6 +1178,23 @@ reset_button.addEventListener("click", function() {
     hideSidebar();
   }
 });
+
+function getSaveObject(): {[key:string]:any} {
+  let save_data_str = window.localStorage.getItem('loops');
+  return save_data_str ? JSON.parse(save_data_str) : {};
+}
+function save() {
+  // preserve any unknown properties
+  let save_data = getSaveObject();
+  save_data.level_number = level_number;
+  window.localStorage.setItem("loops", JSON.stringify(save_data));
+}
+
+(function () {
+  let save_data = getSaveObject();
+  level_number = save_data.level_number || 1;
+  loadNewLevel();
+})();
 
 (function() {
   let save_data_str = window.localStorage.getItem("loops");
