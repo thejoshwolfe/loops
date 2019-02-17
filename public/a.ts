@@ -1135,7 +1135,6 @@ function loadNewLevel() {
   save();
 }
 function getLevelForNumber(level_number: number): Level {
-  return generateLevel(new HexagonLevel(true, 4, 4, true, ColorRules.TwoSeparate, true));
   switch (level_number) {
     case 1:
       return new SquareLevel(true, 4, 4, false, ColorRules.Single, false, oneColor([
@@ -1223,7 +1222,6 @@ function generateLevel(level: Level): Level {
     const other_tile = level.getTileIndexFromVector(vector.tile_index, vector.direction);
     if (!level.isInBounds(other_tile)) continue;
     let edge_value = Math.floor(Math.random() * possible_edge_values);
-    //edge_value = possible_edge_values - 1; // TODO: tmp
     for (let color_index = 0; color_index < level.color_count; color_index++) {
       if (edge_value & (1 << color_index)) {
         level.tiles[vector.tile_index].colors[color_index] |= vector.direction;
@@ -1231,7 +1229,6 @@ function generateLevel(level: Level): Level {
       }
     }
   }
-  //return level; // TODO: tmp
 
   // rotate the tiles randomly
   for (let tile_index of level.allTileIndexes()) {
