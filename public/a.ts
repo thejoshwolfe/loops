@@ -147,6 +147,9 @@ class Level {
         break;
       default: throw new AssertionFailure();
     }
+
+    // TODO: there's a bug with odd width wrapping for hexagons. please avoid it until it's fixed.
+    assert(!(this.shape == Shape.Hexagon && (this.tiles_per_row & 1) && this.toroidal));
   }
 
   getTileIndexFromDisplayPoint(display_x: number, display_y: number): number {
