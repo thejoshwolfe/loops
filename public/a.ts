@@ -214,18 +214,52 @@ abstract class Level {
     }
   }
 
-  abstract getTileIndexFromVector(tile_index: number, direction: number): number;
-  //{
-  //  switch (this.shape) {
-  //    case Shape.Square: {
-  //      asdf
-  //    }
-  //    case Shape.Hexagon: {
-  //      asdf
-  //    }
-  //    default: throw new AssertionFailure();
-  //  }
-  //}
+  getTileIndexFromVector(tile_index: number, direction: number): number {
+    switch (this.shape) {
+      case Shape.Square: {
+        let {x, y} = this.getTileCoordFromIndex(tile_index);
+        switch (direction) {
+          case 1: x = euclideanMod(x + 1, this.tiles_per_row   ); break; // right
+          case 2: y = euclideanMod(y + 1, this.tiles_per_column); break; // down
+          case 4: x = euclideanMod(x - 1, this.tiles_per_row   ); break; // left
+          case 8: y = euclideanMod(y - 1, this.tiles_per_column); break; // up
+          default: throw new AssertionFailure();
+        }
+        return this.getTileIndexFromCoord(x, y);
+      }
+      case Shape.Hexagon: {
+        let {x, y} = this.getTileCoordFromIndex(tile_index);
+        const is_offset_down = !!(x & 1);
+        switch (direction) {
+          case 1: // down right
+            x = euclideanMod(x + 1, this.tiles_per_row);
+            if (is_offset_down) y = euclideanMod(y + 1, this.tiles_per_column);
+            break;
+          case 2: // down
+            y = euclideanMod(y + 1, this.tiles_per_column);
+            break;
+          case 4: // down left
+            x = euclideanMod(x - 1, this.tiles_per_row);
+            if (is_offset_down) y = euclideanMod(y + 1, this.tiles_per_column);
+            break;
+          case 8: // up left
+            x = euclideanMod(x - 1, this.tiles_per_row);
+            if (!is_offset_down) y = euclideanMod(y - 1, this.tiles_per_column);
+            break;
+          case 16: // up
+            y = euclideanMod(y - 1, this.tiles_per_column);
+            break;
+          case 32: // up right
+            x = euclideanMod(x + 1, this.tiles_per_row);
+            if (!is_offset_down) y = euclideanMod(y - 1, this.tiles_per_column);
+            break;
+          default: throw new AssertionFailure();
+        }
+        return this.getTileIndexFromCoord(x, y);
+      }
+      default: throw new AssertionFailure();
+    }
+  }
 
   abstract reverseDirection(direction: number): number;
   //{
@@ -491,18 +525,6 @@ class SquareLevel extends Level {
   //   2
   // the length of each edge is 1 unit.
 
-  getTileIndexFromVector(tile_index: number, direction: number): number {
-    let {x, y} = this.getTileCoordFromIndex(tile_index);
-    switch (direction) {
-      case 1: x = euclideanMod(x + 1, this.tiles_per_row   ); break; // right
-      case 2: y = euclideanMod(y + 1, this.tiles_per_column); break; // down
-      case 4: x = euclideanMod(x - 1, this.tiles_per_row   ); break; // left
-      case 8: y = euclideanMod(y - 1, this.tiles_per_column); break; // up
-      default: throw new AssertionFailure();
-    }
-    return this.getTileIndexFromCoord(x, y);
-  }
-
   reverseDirection(direction: number): number {
     return 0xf & (
       (direction << 2) |
@@ -672,37 +694,6 @@ class HexagonLevel extends Level {
   //    02
   // the length of each edge is 1 unit.
   // the height of a hexagon is sqrt3.
-
-  getTileIndexFromVector(tile_index: number, direction: number): number {
-    let {x, y} = this.getTileCoordFromIndex(tile_index);
-    const is_offset_down = !!(x & 1);
-    switch (direction) {
-      case 1: // down right
-        x = euclideanMod(x + 1, this.tiles_per_row);
-        if (is_offset_down) y = euclideanMod(y + 1, this.tiles_per_column);
-        break;
-      case 2: // down
-        y = euclideanMod(y + 1, this.tiles_per_column);
-        break;
-      case 4: // down left
-        x = euclideanMod(x - 1, this.tiles_per_row);
-        if (is_offset_down) y = euclideanMod(y + 1, this.tiles_per_column);
-        break;
-      case 8: // up left
-        x = euclideanMod(x - 1, this.tiles_per_row);
-        if (!is_offset_down) y = euclideanMod(y - 1, this.tiles_per_column);
-        break;
-      case 16: // up
-        y = euclideanMod(y - 1, this.tiles_per_column);
-        break;
-      case 32: // up right
-        x = euclideanMod(x + 1, this.tiles_per_row);
-        if (!is_offset_down) y = euclideanMod(y - 1, this.tiles_per_column);
-        break;
-      default: throw new AssertionFailure();
-    }
-    return this.getTileIndexFromCoord(x, y);
-  }
 
   reverseDirection(direction: number): number {
     return 0x3f & (
