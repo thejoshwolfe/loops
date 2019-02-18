@@ -327,18 +327,70 @@ abstract class Level {
     }
   }
 
-  abstract renderGridLines(context: CanvasRenderingContext2D): void;
-  //{
-  //  switch (this.shape) {
-  //    case Shape.Square: {
-  //      asdf
-  //    }
-  //    case Shape.Hexagon: {
-  //      asdf
-  //    }
-  //    default: throw new AssertionFailure();
-  //  }
-  //}
+  renderGridLines(context: CanvasRenderingContext2D): void {
+    switch (this.shape) {
+      case Shape.Square: {
+        // straight shots in both directions
+        if (this.toroidal) {
+          for (let x = -this.tiles_per_row; x < 2 * this.tiles_per_row; x++) {
+            context.moveTo(x, -this.tiles_per_column);
+            context.lineTo(x, 2 * this.tiles_per_column);
+          }
+          for (let y = -this.tiles_per_column; y < 2 * this.tiles_per_column; y++) {
+            context.moveTo(-this.tiles_per_row, y);
+            context.lineTo(2 * this.tiles_per_row, y);
+          }
+        } else {
+          for (let x = 2; x < this.tiles_per_row - 1; x++) {
+            context.moveTo(x, 1);
+            context.lineTo(x, this.tiles_per_column - 1);
+          }
+          for (let y = 2; y < this.tiles_per_column - 1; y++) {
+            context.moveTo(1, y);
+            context.lineTo(this.tiles_per_row - 1, y);
+          }
+        }
+        break;
+      }
+      case Shape.Hexagon: {
+        if (this.toroidal) {
+          var top = -this.tiles_per_column;
+          var bottom = 2 * this.tiles_per_column;
+          var left = -(this.tiles_per_row & ~1);
+          var right = 2 * this.tiles_per_row;
+        } else {
+          top = 0;
+          bottom = this.tiles_per_column;
+          left = 0;
+          right = this.tiles_per_row;
+        }
+        for (let y = top; y <= bottom; y++) {
+          // the repeating pattern is:
+          //   __
+          //  /  \__
+          //  \  /
+          //
+          const high_y = sqrt3 * y;
+          const mid_y = sqrt3 * (y + 0.5);
+          const low_y = sqrt3 * (y + 1);
+          for (let x = left; x <= right; x += 2) {
+            const left_x = 1.5 * x;
+            context.moveTo(left_x + 0.5, low_y);
+            context.lineTo(left_x + 0.0, mid_y);
+            context.lineTo(left_x + 0.5, high_y);
+            context.lineTo(left_x + 1.5, high_y);
+            context.lineTo(left_x + 2.0, mid_y);
+            context.lineTo(left_x + 1.5, low_y);
+            context.moveTo(left_x + 2.0, mid_y);
+            context.lineTo(left_x + 3.0, mid_y);
+            // TODO: edge cases
+          }
+        }
+        break;
+      }
+      default: throw new AssertionFailure();
+    }
+  }
 
   abstract renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number, animation_progress: number, endpoint_style: EndpointStyle): void;
   //{
@@ -552,29 +604,6 @@ class SquareLevel extends Level {
   //   2
   // the length of each edge is 1 unit.
 
-  renderGridLines(context: CanvasRenderingContext2D) {
-    // straight shots in both directions
-    if (this.toroidal) {
-      for (let x = -this.tiles_per_row; x < 2 * this.tiles_per_row; x++) {
-        context.moveTo(x, -this.tiles_per_column);
-        context.lineTo(x, 2 * this.tiles_per_column);
-      }
-      for (let y = -this.tiles_per_column; y < 2 * this.tiles_per_column; y++) {
-        context.moveTo(-this.tiles_per_row, y);
-        context.lineTo(2 * this.tiles_per_row, y);
-      }
-    } else {
-      for (let x = 2; x < this.tiles_per_row - 1; x++) {
-        context.moveTo(x, 1);
-        context.lineTo(x, this.tiles_per_column - 1);
-      }
-      for (let y = 2; y < this.tiles_per_column - 1; y++) {
-        context.moveTo(1, y);
-        context.lineTo(this.tiles_per_row - 1, y);
-      }
-    }
-  }
-
   renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number, animation_progress: number, endpoint_style: EndpointStyle) {
     if (color_value === 0) return;
     context.save();
@@ -696,42 +725,6 @@ class HexagonLevel extends Level {
   //    02
   // the length of each edge is 1 unit.
   // the height of a hexagon is sqrt3.
-
-  renderGridLines(context: CanvasRenderingContext2D) {
-    if (this.toroidal) {
-      var top = -this.tiles_per_column;
-      var bottom = 2 * this.tiles_per_column;
-      var left = -(this.tiles_per_row & ~1);
-      var right = 2 * this.tiles_per_row;
-    } else {
-      top = 0;
-      bottom = this.tiles_per_column;
-      left = 0;
-      right = this.tiles_per_row;
-    }
-    for (let y = top; y <= bottom; y++) {
-      // the repeating pattern is:
-      //   __
-      //  /  \__
-      //  \  /
-      //
-      const high_y = sqrt3 * y;
-      const mid_y = sqrt3 * (y + 0.5);
-      const low_y = sqrt3 * (y + 1);
-      for (let x = left; x <= right; x += 2) {
-        const left_x = 1.5 * x;
-        context.moveTo(left_x + 0.5, low_y);
-        context.lineTo(left_x + 0.0, mid_y);
-        context.lineTo(left_x + 0.5, high_y);
-        context.lineTo(left_x + 1.5, high_y);
-        context.lineTo(left_x + 2.0, mid_y);
-        context.lineTo(left_x + 1.5, low_y);
-        context.moveTo(left_x + 2.0, mid_y);
-        context.lineTo(left_x + 3.0, mid_y);
-        // TODO: edge cases
-      }
-    }
-  }
 
   renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number, animation_progress: number, endpoint_style: EndpointStyle) {
     if (color_value === 0) return;
