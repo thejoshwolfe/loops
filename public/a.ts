@@ -301,18 +301,31 @@ abstract class Level {
     }
   }
 
-  abstract rotateRandomly(tile_index: number): void;
-  //{
-  //  switch (this.shape) {
-  //    case Shape.Square: {
-  //      asdf
-  //    }
-  //    case Shape.Hexagon: {
-  //      asdf
-  //    }
-  //    default: throw new AssertionFailure();
-  //  }
-  //}
+  rotateRandomly(tile_index: number): void {
+    switch (this.shape) {
+      case Shape.Square: {
+        const rotations = Math.floor(Math.random() * 4);
+        if (rotations === 0) return;
+        for (let color_index = 0; color_index < this.color_count; color_index++) {
+          let color_value = this.tiles[tile_index].colors[color_index];
+          color_value = 0xf & ((color_value << rotations) | (color_value >> (4 - rotations)));
+          this.tiles[tile_index].colors[color_index] = color_value;
+        }
+        break;
+      }
+      case Shape.Hexagon: {
+        const rotations = Math.floor(Math.random() * 6);
+        if (rotations === 0) return;
+        for (let color_index = 0; color_index < this.color_count; color_index++) {
+          let color_value = this.tiles[tile_index].colors[color_index];
+          color_value = 0x3f & ((color_value << rotations) | (color_value >> (6 - rotations)));
+          this.tiles[tile_index].colors[color_index] = color_value;
+        }
+        break;
+      }
+      default: throw new AssertionFailure();
+    }
+  }
 
   abstract renderGridLines(context: CanvasRenderingContext2D): void;
   //{
@@ -539,16 +552,6 @@ class SquareLevel extends Level {
   //   2
   // the length of each edge is 1 unit.
 
-  rotateRandomly(tile_index: number) {
-    const rotations = Math.floor(Math.random() * 4);
-    if (rotations === 0) return;
-    for (let color_index = 0; color_index < this.color_count; color_index++) {
-      let color_value = this.tiles[tile_index].colors[color_index];
-      color_value = 0xf & ((color_value << rotations) | (color_value >> (4 - rotations)));
-      this.tiles[tile_index].colors[color_index] = color_value;
-    }
-  }
-
   renderGridLines(context: CanvasRenderingContext2D) {
     // straight shots in both directions
     if (this.toroidal) {
@@ -693,16 +696,6 @@ class HexagonLevel extends Level {
   //    02
   // the length of each edge is 1 unit.
   // the height of a hexagon is sqrt3.
-
-  rotateRandomly(tile_index: number) {
-    const rotations = Math.floor(Math.random() * 6);
-    if (rotations === 0) return;
-    for (let color_index = 0; color_index < this.color_count; color_index++) {
-      let color_value = this.tiles[tile_index].colors[color_index];
-      color_value = 0x3f & ((color_value << rotations) | (color_value >> (6 - rotations)));
-      this.tiles[tile_index].colors[color_index] = color_value;
-    }
-  }
 
   renderGridLines(context: CanvasRenderingContext2D) {
     if (this.toroidal) {
