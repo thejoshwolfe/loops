@@ -261,18 +261,23 @@ abstract class Level {
     }
   }
 
-  abstract reverseDirection(direction: number): number;
-  //{
-  //  switch (this.shape) {
-  //    case Shape.Square: {
-  //      asdf
-  //    }
-  //    case Shape.Hexagon: {
-  //      asdf
-  //    }
-  //    default: throw new AssertionFailure();
-  //  }
-  //}
+  reverseDirection(direction: number): number {
+    switch (this.shape) {
+      case Shape.Square: {
+        return 0xf & (
+          (direction << 2) |
+          (direction >> 2)
+        );
+      }
+      case Shape.Hexagon: {
+        return 0x3f & (
+          (direction << 3) |
+          (direction >> 3)
+        );
+      }
+      default: throw new AssertionFailure();
+    }
+  }
 
   abstract rotateTile(tile_index: number): void;
   //{
@@ -525,13 +530,6 @@ class SquareLevel extends Level {
   //   2
   // the length of each edge is 1 unit.
 
-  reverseDirection(direction: number): number {
-    return 0xf & (
-      (direction << 2) |
-      (direction >> 2)
-    );
-  }
-
   rotateTile(tile_index: number) {
     for (let color_index = 0; color_index < this.color_count; color_index++) {
       let color_value = this.tiles[tile_index].colors[color_index];
@@ -694,13 +692,6 @@ class HexagonLevel extends Level {
   //    02
   // the length of each edge is 1 unit.
   // the height of a hexagon is sqrt3.
-
-  reverseDirection(direction: number): number {
-    return 0x3f & (
-      (direction << 3) |
-      (direction >> 3)
-    );
-  }
 
   rotateTile(tile_index: number) {
     for (let color_index = 0; color_index < this.color_count; color_index++) {
