@@ -84,12 +84,15 @@ class Level {
   rough: boolean;
   tiles: Tile[];
 
-  scale_x: number;
-  scale_y: number;
-  offset_x: number;
-  offset_y: number;
+  units_per_tile_x: number;
+  units_per_tile_y: number;
   tile_animation_time: number;
   edges_per_tile: number;
+
+  display_offset_x: number;
+  display_offset_y: number;
+  display_tiles_x: number;
+  display_tiles_y: number;
 
   constructor(parameters: LevelParameters) {
     this.tiles_per_row = parameters.size[0];
@@ -128,27 +131,51 @@ class Level {
       this.tiles.push({colors});
     }
 
+    // calculate a bunch of derived constants
     switch (this.shape) {
       case Shape.Square:
-        this.scale_x = 1;
-        this.scale_y = 1;
-        this.offset_x = 0;
-        this.offset_y = 0;
+        this.units_per_tile_x = 1;
+        this.units_per_tile_y = 1;
         this.tile_animation_time = 150;
         this.edges_per_tile = 4;
+
+        this.display_offset_x = 0;
+        this.display_offset_y = 0;
+        if (this.toroidal) {
+          // show 1.5 extra tiles on the sides
+          this.display_tiles_x = this.tiles_per_row + 3;
+          this.display_tiles_y = this.tiles_per_column + 3;
+        } else {
+          // cut off half of each border tile.
+          this.display_tiles_x = this.tiles_per_row - 1;
+          this.display_tiles_y = this.tiles_per_column - 1;
+        }
         break;
+
       case Shape.Hexagon:
-        this.scale_x = 1.5;
-        this.scale_y = sqrt3;
-        this.offset_x = -0.5;
-        this.offset_y = 0;
+        this.units_per_tile_x = 1.5;
+        this.units_per_tile_y = sqrt3;
         this.tile_animation_time = 120;
         this.edges_per_tile = 6;
+
+        if (this.toroidal) {
+          // show some extra tiles on the sides
+          this.display_offset_x = -0.5;
+          this.display_offset_y = 0;
+          this.display_tiles_x = this.tiles_per_row + 3;
+          this.display_tiles_y = this.tiles_per_column + 3;
+        } else {
+          // show an extra half tile beyond the extreme squiggling ones
+          this.display_offset_x = 0.25;
+          this.display_offset_y = sqrt3 / 4;
+          this.display_tiles_x = this.tiles_per_row - 1;
+          this.display_tiles_y = this.tiles_per_column - 0.5;
+        }
         break;
       default: throw new AssertionFailure();
     }
 
-    // TODO: there's a bug with odd width wrapping for hexagons. please avoid it until it's fixed.
+    // TODO: odd width wrapping for hexagons is not trivial, and doesn't work yet.
     assert(!(this.shape == Shape.Hexagon && (this.tiles_per_row & 1) && this.toroidal));
   }
 
@@ -719,9 +746,6 @@ class Level {
     }
   }
 
-  getDisplayTileCountX(): number { return this.toroidal ? this.tiles_per_row    + 3 : this.tiles_per_row    - 1; }
-  getDisplayTileCountY(): number { return this.toroidal ? this.tiles_per_column + 3 : this.tiles_per_column - 1; }
-
   isInBounds(tile_index: number): boolean {
     if (this.toroidal) return true;
 
@@ -808,19 +832,19 @@ class Level {
       let endpoint_style: EndpointStyle;
       if (this.color_count === 1) {
         context.strokeStyle = "#000";
-        context.lineWidth = level.scale_x * 0.1;
+        context.lineWidth = level.units_per_tile_x * 0.1;
         endpoint_style = EndpointStyle.LargeRing;
       } else if (this.color_count === 2 && !this.allow_overlap) {
         switch (color_index) {
           case 0:
             context.strokeStyle = "#99f";
-            context.lineWidth = level.scale_x * 0.2;
+            context.lineWidth = level.units_per_tile_x * 0.2;
             endpoint_style = EndpointStyle.LargeDot;
             context.fillStyle = context.strokeStyle;
             break;
           case 1:
             context.strokeStyle = "#c06";
-            context.lineWidth = level.scale_x * 0.075;
+            context.lineWidth = level.units_per_tile_x * 0.075;
             endpoint_style = EndpointStyle.SmallRing;
             break;
           default: throw new AssertionFailure();
@@ -829,7 +853,7 @@ class Level {
         switch (color_index) {
           case 0:
             context.strokeStyle = "#e784e1";
-            context.lineWidth = level.scale_x * 0.4;
+            context.lineWidth = level.units_per_tile_x * 0.4;
             context.lineCap = "butt";
             context.lineJoin = "miter";
             endpoint_style = EndpointStyle.LargeDot;
@@ -837,7 +861,7 @@ class Level {
             break;
           case 1:
             context.strokeStyle = "#000caa";
-            context.lineWidth = level.scale_x * 0.075;
+            context.lineWidth = level.units_per_tile_x * 0.075;
             endpoint_style = EndpointStyle.LargeRing;
             break;
           default: throw new AssertionFailure();
@@ -857,10 +881,10 @@ class Level {
 
     // toroidal guide
     if (this.toroidal) {
-      let left = this.offset_x;
-      let right = left + this.tiles_per_row * this.scale_x;
-      let top = this.offset_y;
-      let bottom = top + this.tiles_per_column * this.scale_y;
+      let left = this.display_offset_x;
+      let right = left + this.tiles_per_row * this.units_per_tile_x;
+      let top = this.display_offset_y;
+      let bottom = top + this.tiles_per_column * this.units_per_tile_y;
       context.strokeStyle = "rgba(0,0,0,0.5)";
       context.lineWidth = 0.05;
       context.lineCap = "round";
@@ -960,11 +984,11 @@ canvas.addEventListener("mousedown", function(event: MouseEvent) {
     return;
   }
   if (!(game_state === GameState.Playing || game_state === GameState.FadeIn)) return;
-  const display_x = (event.x - origin_x) / scale;
-  const display_y = (event.y - origin_y) / scale;
+  const display_x = (event.x - origin_pixel_x) / units_to_pixels;
+  const display_y = (event.y - origin_pixel_y) / units_to_pixels;
 
-  const wrapped_display_x = euclideanMod(display_x, level.tiles_per_row * level.scale_x);
-  const wrapped_display_y = euclideanMod(display_y, level.tiles_per_column * level.scale_y);
+  const wrapped_display_x = euclideanMod(display_x, level.tiles_per_row * level.units_per_tile_x);
+  const wrapped_display_y = euclideanMod(display_y, level.tiles_per_column * level.units_per_tile_y);
   if (!level.toroidal) {
     // make sure the click is in bounds
     if (display_x !== wrapped_display_x || display_y !== wrapped_display_y) return;
@@ -1000,40 +1024,33 @@ function animateIntoRotation(tile_index: number) {
 }
 
 // these are calculated below
-let scale = 100;
-// the origin is the upper-left corner of the upper-left-corner border tile.
-let origin_x = -50;
-let origin_y = -50;
+let units_to_pixels = 100;
+// For non-toroidal Square: the origin is the upper-left corner of the upper-left-corner border tile.
+let origin_pixel_x = -50;
+let origin_pixel_y = -50;
 function handleResize() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
   buffer_canvas.width = canvas.width;
   buffer_canvas.height = canvas.height;
 
-  const level_scale_x = level.scale_x;
-  const level_scale_y = level.scale_y;
-  // cut off half of the border tiles
-  const display_width = level_scale_x * level.getDisplayTileCountX();
-  const display_height = level_scale_y * level.getDisplayTileCountY();
+  const display_width = level.units_per_tile_x * level.display_tiles_x;
+  const display_height = level.units_per_tile_y * level.display_tiles_y;
 
   const level_aspect_ratio = display_height / display_width;
   const canvas_aspect_ratio = canvas.height / canvas.width;
-  scale =
+  units_to_pixels =
     level_aspect_ratio < canvas_aspect_ratio ?
     canvas.width / display_width :
     canvas.height / display_height;
 
-  let center_x = level_scale_x * level.tiles_per_row / 2;
-  let center_y = level_scale_y * level.tiles_per_column / 2;
-  if (level.shape === Shape.Hexagon && level.toroidal) {
-    // the coordinate system works well in the code,
-    // but it looks slightly off to the human eye.
-    center_x += level.offset_x;
-    center_y += level.offset_y;
-  }
+  let center_x = level.units_per_tile_x * level.tiles_per_row / 2;
+  let center_y = level.units_per_tile_y * level.tiles_per_column / 2;
+  center_x += level.display_offset_x;
+  center_y += level.display_offset_y;
 
-  origin_x = canvas.width / 2 - scale * center_x;
-  origin_y = canvas.height / 2 - scale * center_y;
+  origin_pixel_x = canvas.width / 2 - units_to_pixels * center_x;
+  origin_pixel_y = canvas.height / 2 - units_to_pixels * center_y;
 
   renderEverything();
 }
@@ -1046,8 +1063,8 @@ function renderEverything() {
 
   context.save();
   try {
-    context.translate(origin_x, origin_y);
-    context.scale(scale, scale);
+    context.translate(origin_pixel_x, origin_pixel_y);
+    context.scale(units_to_pixels, units_to_pixels);
     level.renderLevel(context);
 
   } finally {
