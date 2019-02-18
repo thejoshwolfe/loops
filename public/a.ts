@@ -34,7 +34,6 @@ type Vector = {tile_index:number, direction:number};
 type Tile = {colors:number[]};
 
 abstract class Level {
-  force_grid_visible: boolean;
   tiles_per_row: number;
   tiles_per_column: number;
   cement_states: {[tile_index:number]: number} | null;
@@ -43,8 +42,7 @@ abstract class Level {
   toroidal: boolean;
   tiles: Tile[];
 
-  constructor(force_grid_visible: boolean, tiles_per_row: number, tiles_per_column: number, cement_mode: boolean, color_rules: ColorRules, toroidal: boolean, tiles?: Tile[]) {
-    this.force_grid_visible = force_grid_visible;
+  constructor(tiles_per_row: number, tiles_per_column: number, cement_mode: boolean, color_rules: ColorRules, toroidal: boolean, tiles?: Tile[]) {
     this.tiles_per_row = tiles_per_row;
     this.tiles_per_column = tiles_per_column;
     this.cement_states = cement_mode ? {} : null;
@@ -159,17 +157,13 @@ abstract class Level {
 
   renderLevel(context: CanvasRenderingContext2D) {
     // grid lines
-    const unsolved_count = this.force_grid_visible ? 999 : this.countUnsolved();
-    if (unsolved_count > 4) {
-      const color = Math.max(0xdd, 0xff - unsolved_count + 4).toString(16);
-      context.strokeStyle = "#" + color + color + color;
-      context.lineWidth = 0.03;
-      context.lineCap = "round";
-      context.lineJoin = "round";
-      context.beginPath();
-      this.renderGridLines(context);
-      context.stroke();
-    }
+    context.strokeStyle = "#ddd";
+    context.lineWidth = 0.03;
+    context.lineCap = "round";
+    context.lineJoin = "round";
+    context.beginPath();
+    this.renderGridLines(context);
+    context.stroke();
 
     // cement background
     if (level.cement_states != null) {
@@ -1137,21 +1131,21 @@ function loadNewLevel() {
 function getLevelForNumber(level_number: number): Level {
   switch (level_number) {
     case 1:
-      return new SquareLevel(true, 4, 4, false, ColorRules.Single, false, oneColor([
+      return new SquareLevel(4, 4, false, ColorRules.Single, false, oneColor([
         0, 0, 0, 0,
         0, 6, 1, 0,
         0, 6, 2, 0,
         0, 0, 0, 0,
       ]));
     case 2:
-      return new SquareLevel(true, 5, 4, false, ColorRules.Single, false, oneColor([
+      return new SquareLevel(5, 4, false, ColorRules.Single, false, oneColor([
         0, 0, 0, 0, 0,
         0, 6,14,12, 0,
         0, 3, 9, 4, 0,
         0, 0, 0, 0, 0,
       ]));
     case 3:
-      return new SquareLevel(true, 5, 5, false, ColorRules.Single, false, oneColor([
+      return new SquareLevel(5, 5, false, ColorRules.Single, false, oneColor([
         0, 0, 0, 0, 0,
         0, 2, 3, 4, 0,
         0, 2, 1, 5, 0,
@@ -1159,56 +1153,56 @@ function getLevelForNumber(level_number: number): Level {
         0, 0, 0, 0, 0,
       ]));
     case 4:
-      return generateLevel(new SquareLevel(true, 7, 7, false, ColorRules.Single, false));
+      return generateLevel(new SquareLevel(7, 7, false, ColorRules.Single, false));
     case 5:
-      return generateLevel(new SquareLevel(false, 8, 8, false, ColorRules.Single, false));
+      return generateLevel(new SquareLevel(8, 8, false, ColorRules.Single, false));
     case 6:
-      return generateLevel(new HexagonLevel(true, 5, 5, false, ColorRules.Single, false));
+      return generateLevel(new HexagonLevel(5, 5, false, ColorRules.Single, false));
     case 7:
-      return generateLevel(new HexagonLevel(true, 6, 6, false, ColorRules.Single, false));
+      return generateLevel(new HexagonLevel(6, 6, false, ColorRules.Single, false));
     case 8:
-      return generateLevel(new HexagonLevel(true, 7, 7, false, ColorRules.Single, false));
+      return generateLevel(new HexagonLevel(7, 7, false, ColorRules.Single, false));
     case 9:
-      return generateLevel(new HexagonLevel(false, 8, 8, false, ColorRules.Single, false));
+      return generateLevel(new HexagonLevel(8, 8, false, ColorRules.Single, false));
     case 10:
-      return generateLevel(new SquareLevel(true, 7, 7, false, ColorRules.TwoSeparate, false));
+      return generateLevel(new SquareLevel(7, 7, false, ColorRules.TwoSeparate, false));
     case 11:
-      return generateLevel(new SquareLevel(true, 9, 9, false, ColorRules.TwoSeparate, false));
+      return generateLevel(new SquareLevel(9, 9, false, ColorRules.TwoSeparate, false));
     case 12:
-      return generateLevel(new HexagonLevel(true, 6, 6, false, ColorRules.TwoSeparate, false));
+      return generateLevel(new HexagonLevel(6, 6, false, ColorRules.TwoSeparate, false));
     case 13:
-      return generateLevel(new HexagonLevel(true, 8, 8, false, ColorRules.TwoSeparate, false));
+      return generateLevel(new HexagonLevel(8, 8, false, ColorRules.TwoSeparate, false));
     case 14:
-      return generateLevel(new SquareLevel(true, 9, 9, false, ColorRules.TwoOverlap, false));
+      return generateLevel(new SquareLevel(9, 9, false, ColorRules.TwoOverlap, false));
     case 15:
-      return generateLevel(new HexagonLevel(true, 8, 8, false, ColorRules.TwoOverlap, false));
+      return generateLevel(new HexagonLevel(8, 8, false, ColorRules.TwoOverlap, false));
   }
   // loop
   switch ((level_number - 16) % 12) {
     case 0:
-      return generateLevel(new SquareLevel(false, 10, 10, true, ColorRules.TwoOverlap, false));
+      return generateLevel(new SquareLevel(10, 10, true, ColorRules.TwoOverlap, false));
     case 1:
-      return generateLevel(new HexagonLevel(false, 9, 9, true, ColorRules.TwoOverlap, false));
+      return generateLevel(new HexagonLevel(9, 9, true, ColorRules.TwoOverlap, false));
     case 2:
-      return generateLevel(new SquareLevel(false, 10, 10, true, ColorRules.TwoSeparate, false));
+      return generateLevel(new SquareLevel(10, 10, true, ColorRules.TwoSeparate, false));
     case 3:
-      return generateLevel(new HexagonLevel(false, 9, 9, true, ColorRules.TwoSeparate, false));
+      return generateLevel(new HexagonLevel(9, 9, true, ColorRules.TwoSeparate, false));
     case 4:
-      return generateLevel(new SquareLevel(false, 10, 10, true, ColorRules.Single, false));
+      return generateLevel(new SquareLevel(10, 10, true, ColorRules.Single, false));
     case 5:
-      return generateLevel(new HexagonLevel(false, 9, 9, true, ColorRules.Single, false));
+      return generateLevel(new HexagonLevel(9, 9, true, ColorRules.Single, false));
     case 6:
-      return generateLevel(new SquareLevel(false, 6, 6, false, ColorRules.TwoOverlap, true));
+      return generateLevel(new SquareLevel(6, 6, false, ColorRules.TwoOverlap, true));
     case 7:
-      return generateLevel(new HexagonLevel(false, 6, 6, false, ColorRules.TwoOverlap, true));
+      return generateLevel(new HexagonLevel(6, 6, false, ColorRules.TwoOverlap, true));
     case 8:
-      return generateLevel(new SquareLevel(false, 6, 6, false, ColorRules.TwoSeparate, true));
+      return generateLevel(new SquareLevel(6, 6, false, ColorRules.TwoSeparate, true));
     case 9:
-      return generateLevel(new HexagonLevel(false, 6, 6, false, ColorRules.TwoSeparate, true));
+      return generateLevel(new HexagonLevel(6, 6, false, ColorRules.TwoSeparate, true));
     case 10:
-      return generateLevel(new SquareLevel(false, 6, 6, false, ColorRules.Single, true));
+      return generateLevel(new SquareLevel(6, 6, false, ColorRules.Single, true));
     case 11:
-      return generateLevel(new HexagonLevel(false, 6, 6, false, ColorRules.Single, true));
+      return generateLevel(new HexagonLevel(6, 6, false, ColorRules.Single, true));
     default:
       throw new AssertionFailure();
   }
