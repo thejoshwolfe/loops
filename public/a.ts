@@ -770,25 +770,27 @@ class Level {
     context.stroke();
 
     // tile background
-    for (let location of this.allTileIndexes()) {
-      if (level.frozen_tiles[location]) {
-        context.fillStyle = "#ccc";
-      } else {
-        let age = level.recent_touch_queue.indexOf(location);
-        if (age === -1) continue;
-        switch (age) {
-          case 0:
-            context.fillStyle = "#eee";
-            break;
-          case 1:
-          case 2:
-            context.fillStyle = "#eee";
-            break;
-          default: throw new AssertionFailure();
+    if (this.cement_mode) {
+      for (let location of this.allTileIndexes()) {
+        if (level.frozen_tiles[location]) {
+          context.fillStyle = "#ccc";
+        } else {
+          let age = level.recent_touch_queue.indexOf(location);
+          if (age === -1) continue;
+          switch (age) {
+            case 0:
+              context.fillStyle = "#eee";
+              break;
+            case 1:
+            case 2:
+              context.fillStyle = "#eee";
+              break;
+            default: throw new AssertionFailure();
+          }
         }
+        const {x, y} = this.getTileCoordFromIndex(location);
+        this.renderTileBackgrounds(context, x, y);
       }
-      const {x, y} = this.getTileCoordFromIndex(location);
-      this.renderTileBackgrounds(context, x, y);
     }
 
     // tiles
