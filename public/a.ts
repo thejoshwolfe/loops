@@ -74,7 +74,9 @@ class Level {
   tiles_per_row: number;
   tiles_per_column: number;
   shape: Shape;
-  cement_states: {[tile_index:number]: number} | null;
+  frozen_tiles: {[tile_index:number]: boolean};
+  recent_touch_queue: number[];
+  cement_mode: boolean;
   color_count: number;
   allow_overlap: boolean;
   toroidal: boolean;
@@ -91,7 +93,9 @@ class Level {
     this.tiles_per_row = parameters.size[0];
     this.tiles_per_column = parameters.size[1];
     this.shape = parameters.shape;
-    this.cement_states = parameters.cement_mode ? {} : null;
+    this.cement_mode = !!parameters.cement_mode;
+    this.recent_touch_queue = [];
+    this.frozen_tiles = {};
     this.toroidal = parameters.toroidal || false;
 
     switch (parameters.colors) {
@@ -719,6 +723,10 @@ class Level {
   getDisplayTileCountX(): number { return this.toroidal ? this.tiles_per_row    + 3 : this.tiles_per_row    - 1; }
   getDisplayTileCountY(): number { return this.toroidal ? this.tiles_per_column + 3 : this.tiles_per_column - 1; }
 
+  isTileFrozen(tile_index: number): boolean {
+    return !!this.frozen_tiles[tile_index];
+  }
+
   isInBounds(tile_index: number): boolean {
     if (this.toroidal) return true;
 
@@ -729,28 +737,22 @@ class Level {
     );
   }
 
-  touchCement(tile_index: number): boolean {
-    if (this.cement_states == null) return true;
-    // cement is enabled
-    let age = this.cement_states[tile_index];
-    if (age === undefined) {
-      this.cement_states[tile_index] = 0;
-    } else if (age >= 4) {
-      // sry bruh
-      return false;
-    } else if (age === 1) {
-      // allow multiple clicks on the same tile without advancing time.
-      return true;
+  touchTile(tile_index: number): void {
+    if (!this.cement_mode) return;
+    let index = this.recent_touch_queue.indexOf(tile_index);
+    if (index !== -1) {
+      // bring it to the front
+      this.recent_touch_queue.splice(index, 1);
+      this.recent_touch_queue.unshift(tile_index);
     } else {
-      // clicking on drying cement resets it, but everything else still drys.
-      this.cement_states[tile_index] = 0;
-    }
-    for (let k in this.cement_states) {
-      if (this.cement_states[k] < 4) {
-        this.cement_states[k]++;
+      // newly clicked
+      this.recent_touch_queue.unshift(tile_index);
+      if (this.recent_touch_queue.length > 3) {
+        // something's getting frozen
+        let freezing_tile = this.recent_touch_queue.pop()!;
+        this.frozen_tiles[freezing_tile] = true;
       }
     }
-    return true;
   }
 
   countUnsolved(): number {
@@ -779,27 +781,26 @@ class Level {
     this.renderGridLines(context);
     context.stroke();
 
-    // cement background
-    if (level.cement_states != null) {
-      for (let location of this.allTileIndexes()) {
-        let age = level.cement_states[location];
-        if (age === undefined) continue;
+    // tile background
+    for (let location of this.allTileIndexes()) {
+      if (level.frozen_tiles[location]) {
+        context.fillStyle = "#ccc";
+      } else {
+        let age = level.recent_touch_queue.indexOf(location);
+        if (age === -1) continue;
         switch (age) {
-          case undefined:
-          case 1:
-            continue;
-          case 2:
-          case 3:
+          case 0:
             context.fillStyle = "#eee";
             break;
-          case 4:
-            context.fillStyle = "#ccc";
+          case 1:
+          case 2:
+            context.fillStyle = "#eee";
             break;
           default: throw new AssertionFailure();
         }
-        const {x, y} = this.getTileCoordFromIndex(location);
-        this.renderTileBackgrounds(context, x, y);
       }
+      const {x, y} = this.getTileCoordFromIndex(location);
+      this.renderTileBackgrounds(context, x, y);
     }
 
     // tiles
@@ -1052,8 +1053,8 @@ const cheatcode_sequence = [
 ];
 let cheatcode_index = 0;
 function clickTile(tile_index: number): boolean {
-  if (!level.isInBounds(tile_index)) return false;
-  if (!level.touchCement(tile_index)) return false;
+  if (level.isTileFrozen(tile_index)) return false;
+  level.touchTile(tile_index);
   level.rotateTile(tile_index, 1);
 
   renderEverything();
