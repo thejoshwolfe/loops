@@ -392,27 +392,329 @@ abstract class Level {
     }
   }
 
-  abstract renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number, animation_progress: number, endpoint_style: EndpointStyle): void;
-  //{
-  //  switch (this.shape) {
-  //    case Shape.Square: {
-  //      asdf
-  //    }
-  //    case Shape.Hexagon: {
-  //      asdf
-  //    }
-  //    default: throw new AssertionFailure();
-  //  }
-  //}
+  renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number, animation_progress: number, endpoint_style: EndpointStyle): void {
+    switch (this.shape) {
+      case Shape.Square: {
+        if (color_value === 0) return;
+        context.save();
+        try {
+          context.translate(x + 0.5, y + 0.5);
+          if (animation_progress !== 0) {
+            context.rotate(pi/2 * animation_progress);
+          }
+          // normalize rotation
+          switch (color_value) {
+            case 1: break;
+            case 2: color_value = 1; context.rotate(pi/2); break;
+            case 3: break;
+            case 4: color_value = 1; context.rotate(pi); break;
+            case 5: break;
+            case 6: color_value = 3; context.rotate(pi/2); break;
+            case 7: break;
+            case 8: color_value = 1; context.rotate(pi*1.5); break;
+            case 9: color_value = 3; context.rotate(pi*1.5); break;
+            case 10: color_value = 5; context.rotate(pi/2); break;
+            case 11: color_value = 7; context.rotate(pi*1.5); break;
+            case 12: color_value = 3; context.rotate(pi); break;
+            case 13: color_value = 7; context.rotate(pi); break;
+            case 14: color_value = 7; context.rotate(pi/2); break;
+            case 15: break;
+            default: throw new AssertionFailure();
+          }
+
+          switch (color_value) {
+            case 1:
+              switch (endpoint_style) {
+                case EndpointStyle.LargeRing:
+                  context.beginPath();
+                  context.arc(0, 0, 0.25, 0, 2*pi);
+                  context.lineTo(0.5, 0);
+                  context.stroke();
+                  break;
+                case EndpointStyle.SmallRing:
+                  context.beginPath();
+                  context.arc(0, 0, 0.15, 0, 2*pi);
+                  context.lineTo(0.5, 0);
+                  context.stroke();
+                  break;
+                case EndpointStyle.LargeDot:
+                  context.beginPath();
+                  context.arc(0, 0, 0.25, 0, 2*pi);
+                  context.fill();
+
+                  context.beginPath();
+                  context.moveTo(0, 0);
+                  context.lineTo(0.5, 0);
+                  context.stroke();
+                  break;
+                default: throw new AssertionFailure();
+              }
+              break;
+            case 3:
+              context.beginPath();
+              context.arc(0.5, 0.5, 0.5, pi, pi*1.5);
+              context.stroke();
+              break;
+            case 5:
+              context.beginPath();
+              context.moveTo(0.5, 0);
+              context.lineTo(-0.5, 0);
+              context.stroke();
+              break;
+            case 7:
+              context.beginPath();
+              context.arc(-0.5, 0.5, 0.5, pi*1.5, 2*pi);
+              context.stroke();
+              context.beginPath();
+              context.arc(0.5, 0.5, 0.5, pi, pi*1.5);
+              context.stroke();
+              break;
+            case 15:
+              context.beginPath();
+              context.arc(0.5, 0.5, 0.5, pi, pi*1.5);
+              context.stroke();
+              context.beginPath();
+              context.arc(0.5, -0.5, 0.5, pi/2, pi);
+              context.stroke();
+              context.beginPath();
+              context.arc(-0.5, -0.5, 0.5, 0, pi/2);
+              context.stroke();
+              context.beginPath();
+              context.arc(-0.5, 0.5, 0.5, pi*1.5, 2*pi);
+              context.stroke();
+              break;
+            default:
+              throw new AssertionFailure();
+          }
+        } finally {
+          context.restore();
+        }
+        break;
+      }
+      case Shape.Hexagon: {
+        if (color_value === 0) return;
+        context.save();
+        try {
+          if (x & 1) {
+            context.translate(1.5 * x + 1, sqrt3 * (y + 1.0));
+          } else {
+            context.translate(1.5 * x + 1, sqrt3 * (y + 0.5));
+          }
+          if (animation_progress !== 0) {
+            context.rotate(pi/3 * animation_progress);
+          }
+          switch (color_value) {
+            case 1:  break;
+            case 2:  color_value = 1; context.rotate(1/3*pi); break;
+            case 4:  color_value = 1; context.rotate(2/3*pi); break;
+            case 8:  color_value = 1; context.rotate(pi);     break;
+            case 16: color_value = 1; context.rotate(4/3*pi); break;
+            case 32: color_value = 1; context.rotate(5/3*pi); break;
+
+            case 3:  break;
+            case 6:  color_value = 3; context.rotate(1/3*pi); break;
+            case 12: color_value = 3; context.rotate(2/3*pi); break;
+            case 24: color_value = 3; context.rotate(pi);     break;
+            case 48: color_value = 3; context.rotate(4/3*pi); break;
+            case 33: color_value = 3; context.rotate(5/3*pi); break;
+
+            case 5:  break;
+            case 10: color_value = 5; context.rotate(1/3*pi); break;
+            case 20: color_value = 5; context.rotate(2/3*pi); break;
+            case 40: color_value = 5; context.rotate(pi);     break;
+            case 17: color_value = 5; context.rotate(4/3*pi); break;
+            case 34: color_value = 5; context.rotate(5/3*pi); break;
+
+            case 7:  break;
+            case 14: color_value = 7; context.rotate(1/3*pi); break;
+            case 28: color_value = 7; context.rotate(2/3*pi); break;
+            case 56: color_value = 7; context.rotate(pi);     break;
+            case 49: color_value = 7; context.rotate(4/3*pi); break;
+            case 35: color_value = 7; context.rotate(5/3*pi); break;
+
+            case 9:  break;
+            case 18: color_value = 9; context.rotate(1/3*pi); break;
+            case 36: color_value = 9; context.rotate(2/3*pi); break;
+
+            case 11: break;
+            case 22: color_value = 11; context.rotate(1/3*pi); break;
+            case 44: color_value = 11; context.rotate(2/3*pi); break;
+            case 25: color_value = 11; context.rotate(pi);     break;
+            case 50: color_value = 11; context.rotate(4/3*pi); break;
+            case 37: color_value = 11; context.rotate(5/3*pi); break;
+
+            case 13: break;
+            case 26: color_value = 13; context.rotate(1/3*pi); break;
+            case 52: color_value = 13; context.rotate(2/3*pi); break;
+            case 41: color_value = 13; context.rotate(pi);     break;
+            case 19: color_value = 13; context.rotate(4/3*pi); break;
+            case 38: color_value = 13; context.rotate(5/3*pi); break;
+
+            case 15: break;
+            case 30: color_value = 15; context.rotate(1/3*pi); break;
+            case 60: color_value = 15; context.rotate(2/3*pi); break;
+            case 57: color_value = 15; context.rotate(pi);     break;
+            case 51: color_value = 15; context.rotate(4/3*pi); break;
+            case 39: color_value = 15; context.rotate(5/3*pi); break;
+
+            case 21: break;
+            case 42: color_value = 21; context.rotate(1/3*pi); break;
+
+            case 23: break;
+            case 46: color_value = 23; context.rotate(1/3*pi); break;
+            case 29: color_value = 23; context.rotate(2/3*pi); break;
+            case 58: color_value = 23; context.rotate(pi);     break;
+            case 53: color_value = 23; context.rotate(4/3*pi); break;
+            case 43: color_value = 23; context.rotate(5/3*pi); break;
+
+            case 27: break;
+            case 54: color_value = 27; context.rotate(1/3*pi); break;
+            case 45: color_value = 27; context.rotate(2/3*pi); break;
+
+            case 31: break;
+            case 62: color_value = 31; context.rotate(1/3*pi); break;
+            case 61: color_value = 31; context.rotate(2/3*pi); break;
+            case 59: color_value = 31; context.rotate(pi);     break;
+            case 55: color_value = 31; context.rotate(4/3*pi); break;
+            case 47: color_value = 31; context.rotate(5/3*pi); break;
+
+            case 63: break;
+
+            default: throw new AssertionFailure();
+          }
+          switch (color_value) {
+            case 1:
+              context.rotate(pi/6);
+              switch (endpoint_style) {
+                case EndpointStyle.LargeRing:
+                  context.beginPath();
+                  context.arc(0, 0, 0.5, 0, 2*pi);
+                  context.lineTo(sqrt3 / 2, 0);
+                  context.stroke();
+                  break;
+                case EndpointStyle.SmallRing:
+                  context.beginPath();
+                  context.arc(0, 0, 0.33, 0, 2*pi);
+                  context.lineTo(sqrt3 / 2, 0);
+                  context.stroke();
+                  break;
+                case EndpointStyle.LargeDot:
+                  context.beginPath();
+                  context.arc(0, 0, 0.5, 0, 2*pi);
+                  context.fill();
+
+                  context.beginPath();
+                  context.moveTo(0, 0);
+                  context.lineTo(sqrt3 / 2, 0);
+                  context.stroke();
+                  break;
+                default: throw new AssertionFailure();
+              }
+              break;
+            case 3:
+              context.beginPath();
+              context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+              context.stroke();
+              break;
+            case 5:
+              context.beginPath();
+              context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
+              context.stroke();
+              break;
+            case 7:
+              context.beginPath();
+              context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
+              context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+              context.stroke();
+              break;
+            case 9:
+              context.beginPath();
+              context.moveTo(0.75, sqrt3 / 4);
+              context.lineTo(-0.75, -sqrt3 / 4);
+              context.stroke();
+              break;
+            case 11:
+              context.beginPath();
+              context.arc(-1.5, sqrt3/2, 1.5, 5/3*pi, 2*pi);
+              context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+              context.stroke();
+              break;
+            case 13:
+              context.beginPath();
+              context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
+              context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
+              context.stroke();
+              break;
+            case 15:
+              context.beginPath();
+              context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
+              context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
+              context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+              context.stroke();
+              break;
+            case 21:
+              context.beginPath();
+              context.arc(1.5, -sqrt3/2, 1.5, 2/3*pi, pi);
+              context.arc(-1.5, -sqrt3/2, 1.5, 0, 1/3*pi);
+              context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
+              context.stroke();
+              break;
+            case 23:
+              context.beginPath();
+              context.arc(1.5, -sqrt3/2, 1.5, 2/3*pi, pi);
+              context.arc(-1.5, -sqrt3/2, 1.5, 0, 1/3*pi);
+              context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
+              context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+              context.stroke();
+              break;
+            case 27:
+              context.beginPath();
+              context.arc(-0.5, -sqrt3/2, 0.5, 0, 2/3*pi);
+              context.stroke();
+              context.beginPath();
+              context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+              context.stroke();
+              break;
+            case 31:
+              context.beginPath();
+              context.arc(-0.5, -sqrt3/2, 0.5, 0, 2/3*pi);
+              context.arc(-1, 0, 0.5, 5/3*pi, 7/3*pi);
+              context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
+              context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+              context.stroke();
+              break;
+            case 63:
+              context.beginPath();
+              context.arc(1, 0, 0.5, 2/3*pi, 4/3*pi);
+              context.arc(0.5, -sqrt3/2, 0.5, 1/3*pi, pi);
+              context.arc(-0.5, -sqrt3/2, 0.5, 0, 2/3*pi);
+              context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
+              context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
+              context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+              context.stroke();
+              break;
+
+            default: throw new AssertionFailure();
+          }
+        } finally {
+          context.restore();
+        }
+        break;
+      }
+      default: throw new AssertionFailure();
+    }
+  }
 
   abstract renderTileBackground(context: CanvasRenderingContext2D, x: number, y: number): void;
   //{
   //  switch (this.shape) {
   //    case Shape.Square: {
   //      asdf
+  //      break;
   //    }
   //    case Shape.Hexagon: {
   //      asdf
+  //      break;
   //    }
   //    default: throw new AssertionFailure();
   //  }
@@ -604,102 +906,6 @@ class SquareLevel extends Level {
   //   2
   // the length of each edge is 1 unit.
 
-  renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number, animation_progress: number, endpoint_style: EndpointStyle) {
-    if (color_value === 0) return;
-    context.save();
-    try {
-      context.translate(x + 0.5, y + 0.5);
-      if (animation_progress !== 0) {
-        context.rotate(pi/2 * animation_progress);
-      }
-      // normalize rotation
-      switch (color_value) {
-        case 1: break;
-        case 2: color_value = 1; context.rotate(pi/2); break;
-        case 3: break;
-        case 4: color_value = 1; context.rotate(pi); break;
-        case 5: break;
-        case 6: color_value = 3; context.rotate(pi/2); break;
-        case 7: break;
-        case 8: color_value = 1; context.rotate(pi*1.5); break;
-        case 9: color_value = 3; context.rotate(pi*1.5); break;
-        case 10: color_value = 5; context.rotate(pi/2); break;
-        case 11: color_value = 7; context.rotate(pi*1.5); break;
-        case 12: color_value = 3; context.rotate(pi); break;
-        case 13: color_value = 7; context.rotate(pi); break;
-        case 14: color_value = 7; context.rotate(pi/2); break;
-        case 15: break;
-        default: throw new AssertionFailure();
-      }
-
-      switch (color_value) {
-        case 1:
-          switch (endpoint_style) {
-            case EndpointStyle.LargeRing:
-              context.beginPath();
-              context.arc(0, 0, 0.25, 0, 2*pi);
-              context.lineTo(0.5, 0);
-              context.stroke();
-              break;
-            case EndpointStyle.SmallRing:
-              context.beginPath();
-              context.arc(0, 0, 0.15, 0, 2*pi);
-              context.lineTo(0.5, 0);
-              context.stroke();
-              break;
-            case EndpointStyle.LargeDot:
-              context.beginPath();
-              context.arc(0, 0, 0.25, 0, 2*pi);
-              context.fill();
-
-              context.beginPath();
-              context.moveTo(0, 0);
-              context.lineTo(0.5, 0);
-              context.stroke();
-              break;
-            default: throw new AssertionFailure();
-          }
-          break;
-        case 3:
-          context.beginPath();
-          context.arc(0.5, 0.5, 0.5, pi, pi*1.5);
-          context.stroke();
-          break;
-        case 5:
-          context.beginPath();
-          context.moveTo(0.5, 0);
-          context.lineTo(-0.5, 0);
-          context.stroke();
-          break;
-        case 7:
-          context.beginPath();
-          context.arc(-0.5, 0.5, 0.5, pi*1.5, 2*pi);
-          context.stroke();
-          context.beginPath();
-          context.arc(0.5, 0.5, 0.5, pi, pi*1.5);
-          context.stroke();
-          break;
-        case 15:
-          context.beginPath();
-          context.arc(0.5, 0.5, 0.5, pi, pi*1.5);
-          context.stroke();
-          context.beginPath();
-          context.arc(0.5, -0.5, 0.5, pi/2, pi);
-          context.stroke();
-          context.beginPath();
-          context.arc(-0.5, -0.5, 0.5, 0, pi/2);
-          context.stroke();
-          context.beginPath();
-          context.arc(-0.5, 0.5, 0.5, pi*1.5, 2*pi);
-          context.stroke();
-          break;
-        default:
-          throw new AssertionFailure();
-      }
-    } finally {
-      context.restore();
-    }
-  }
 
   renderTileBackground(context: CanvasRenderingContext2D, x: number, y: number) {
     context.fillRect(x, y, 1, 1);
@@ -725,216 +931,6 @@ class HexagonLevel extends Level {
   //    02
   // the length of each edge is 1 unit.
   // the height of a hexagon is sqrt3.
-
-  renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number, animation_progress: number, endpoint_style: EndpointStyle) {
-    if (color_value === 0) return;
-    context.save();
-    try {
-      if (x & 1) {
-        context.translate(1.5 * x + 1, sqrt3 * (y + 1.0));
-      } else {
-        context.translate(1.5 * x + 1, sqrt3 * (y + 0.5));
-      }
-      if (animation_progress !== 0) {
-        context.rotate(pi/3 * animation_progress);
-      }
-      switch (color_value) {
-        case 1:  break;
-        case 2:  color_value = 1; context.rotate(1/3*pi); break;
-        case 4:  color_value = 1; context.rotate(2/3*pi); break;
-        case 8:  color_value = 1; context.rotate(pi);     break;
-        case 16: color_value = 1; context.rotate(4/3*pi); break;
-        case 32: color_value = 1; context.rotate(5/3*pi); break;
-
-        case 3:  break;
-        case 6:  color_value = 3; context.rotate(1/3*pi); break;
-        case 12: color_value = 3; context.rotate(2/3*pi); break;
-        case 24: color_value = 3; context.rotate(pi);     break;
-        case 48: color_value = 3; context.rotate(4/3*pi); break;
-        case 33: color_value = 3; context.rotate(5/3*pi); break;
-
-        case 5:  break;
-        case 10: color_value = 5; context.rotate(1/3*pi); break;
-        case 20: color_value = 5; context.rotate(2/3*pi); break;
-        case 40: color_value = 5; context.rotate(pi);     break;
-        case 17: color_value = 5; context.rotate(4/3*pi); break;
-        case 34: color_value = 5; context.rotate(5/3*pi); break;
-
-        case 7:  break;
-        case 14: color_value = 7; context.rotate(1/3*pi); break;
-        case 28: color_value = 7; context.rotate(2/3*pi); break;
-        case 56: color_value = 7; context.rotate(pi);     break;
-        case 49: color_value = 7; context.rotate(4/3*pi); break;
-        case 35: color_value = 7; context.rotate(5/3*pi); break;
-
-        case 9:  break;
-        case 18: color_value = 9; context.rotate(1/3*pi); break;
-        case 36: color_value = 9; context.rotate(2/3*pi); break;
-
-        case 11: break;
-        case 22: color_value = 11; context.rotate(1/3*pi); break;
-        case 44: color_value = 11; context.rotate(2/3*pi); break;
-        case 25: color_value = 11; context.rotate(pi);     break;
-        case 50: color_value = 11; context.rotate(4/3*pi); break;
-        case 37: color_value = 11; context.rotate(5/3*pi); break;
-
-        case 13: break;
-        case 26: color_value = 13; context.rotate(1/3*pi); break;
-        case 52: color_value = 13; context.rotate(2/3*pi); break;
-        case 41: color_value = 13; context.rotate(pi);     break;
-        case 19: color_value = 13; context.rotate(4/3*pi); break;
-        case 38: color_value = 13; context.rotate(5/3*pi); break;
-
-        case 15: break;
-        case 30: color_value = 15; context.rotate(1/3*pi); break;
-        case 60: color_value = 15; context.rotate(2/3*pi); break;
-        case 57: color_value = 15; context.rotate(pi);     break;
-        case 51: color_value = 15; context.rotate(4/3*pi); break;
-        case 39: color_value = 15; context.rotate(5/3*pi); break;
-
-        case 21: break;
-        case 42: color_value = 21; context.rotate(1/3*pi); break;
-
-        case 23: break;
-        case 46: color_value = 23; context.rotate(1/3*pi); break;
-        case 29: color_value = 23; context.rotate(2/3*pi); break;
-        case 58: color_value = 23; context.rotate(pi);     break;
-        case 53: color_value = 23; context.rotate(4/3*pi); break;
-        case 43: color_value = 23; context.rotate(5/3*pi); break;
-
-        case 27: break;
-        case 54: color_value = 27; context.rotate(1/3*pi); break;
-        case 45: color_value = 27; context.rotate(2/3*pi); break;
-
-        case 31: break;
-        case 62: color_value = 31; context.rotate(1/3*pi); break;
-        case 61: color_value = 31; context.rotate(2/3*pi); break;
-        case 59: color_value = 31; context.rotate(pi);     break;
-        case 55: color_value = 31; context.rotate(4/3*pi); break;
-        case 47: color_value = 31; context.rotate(5/3*pi); break;
-
-        case 63: break;
-
-        default: throw new AssertionFailure();
-      }
-      switch (color_value) {
-        case 1:
-          context.rotate(pi/6);
-          switch (endpoint_style) {
-            case EndpointStyle.LargeRing:
-              context.beginPath();
-              context.arc(0, 0, 0.5, 0, 2*pi);
-              context.lineTo(sqrt3 / 2, 0);
-              context.stroke();
-              break;
-            case EndpointStyle.SmallRing:
-              context.beginPath();
-              context.arc(0, 0, 0.33, 0, 2*pi);
-              context.lineTo(sqrt3 / 2, 0);
-              context.stroke();
-              break;
-            case EndpointStyle.LargeDot:
-              context.beginPath();
-              context.arc(0, 0, 0.5, 0, 2*pi);
-              context.fill();
-
-              context.beginPath();
-              context.moveTo(0, 0);
-              context.lineTo(sqrt3 / 2, 0);
-              context.stroke();
-              break;
-            default: throw new AssertionFailure();
-          }
-          break;
-        case 3:
-          context.beginPath();
-          context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-          context.stroke();
-          break;
-        case 5:
-          context.beginPath();
-          context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
-          context.stroke();
-          break;
-        case 7:
-          context.beginPath();
-          context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
-          context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-          context.stroke();
-          break;
-        case 9:
-          context.beginPath();
-          context.moveTo(0.75, sqrt3 / 4);
-          context.lineTo(-0.75, -sqrt3 / 4);
-          context.stroke();
-          break;
-        case 11:
-          context.beginPath();
-          context.arc(-1.5, sqrt3/2, 1.5, 5/3*pi, 2*pi);
-          context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-          context.stroke();
-          break;
-        case 13:
-          context.beginPath();
-          context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
-          context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
-          context.stroke();
-          break;
-        case 15:
-          context.beginPath();
-          context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
-          context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
-          context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-          context.stroke();
-          break;
-        case 21:
-          context.beginPath();
-          context.arc(1.5, -sqrt3/2, 1.5, 2/3*pi, pi);
-          context.arc(-1.5, -sqrt3/2, 1.5, 0, 1/3*pi);
-          context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
-          context.stroke();
-          break;
-        case 23:
-          context.beginPath();
-          context.arc(1.5, -sqrt3/2, 1.5, 2/3*pi, pi);
-          context.arc(-1.5, -sqrt3/2, 1.5, 0, 1/3*pi);
-          context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
-          context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-          context.stroke();
-          break;
-        case 27:
-          context.beginPath();
-          context.arc(-0.5, -sqrt3/2, 0.5, 0, 2/3*pi);
-          context.stroke();
-          context.beginPath();
-          context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-          context.stroke();
-          break;
-        case 31:
-          context.beginPath();
-          context.arc(-0.5, -sqrt3/2, 0.5, 0, 2/3*pi);
-          context.arc(-1, 0, 0.5, 5/3*pi, 7/3*pi);
-          context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
-          context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-          context.stroke();
-          break;
-        case 63:
-          context.beginPath();
-          context.arc(1, 0, 0.5, 2/3*pi, 4/3*pi);
-          context.arc(0.5, -sqrt3/2, 0.5, 1/3*pi, pi);
-          context.arc(-0.5, -sqrt3/2, 0.5, 0, 2/3*pi);
-          context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
-          context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
-          context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-          context.stroke();
-          break;
-
-        default: throw new AssertionFailure();
-      }
-    } finally {
-      context.restore();
-    }
-  }
 
   renderTileBackground(context: CanvasRenderingContext2D, x: number, y: number) {
     context.save();
