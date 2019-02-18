@@ -100,6 +100,7 @@ class Level {
     this.frozen_tiles = {};
     this.toroidal = parameters.toroidal || false;
     this.rough = parameters.rough || false;
+    this.rough = true;
 
     switch (parameters.colors) {
       case ColorRules.Single:
