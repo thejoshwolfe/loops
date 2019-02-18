@@ -85,6 +85,7 @@ class Level {
   offset_x: number;
   offset_y: number;
   tile_animation_time: number;
+  edges_per_tile: number;
 
   constructor(parameters: LevelParameters, tiles?: Tile[]) {
     this.tiles_per_row = parameters.size[0];
@@ -134,6 +135,7 @@ class Level {
         this.offset_x = 0;
         this.offset_y = 0;
         this.tile_animation_time = 150;
+        this.edges_per_tile = 4;
         break;
       case Shape.Hexagon:
         this.scale_x = 1.5;
@@ -141,6 +143,7 @@ class Level {
         this.offset_x = -0.5;
         this.offset_y = 0;
         this.tile_animation_time = 120;
+        this.edges_per_tile = 6;
         break;
       default: throw new AssertionFailure();
     }
@@ -178,15 +181,7 @@ class Level {
   }
 
   getTileIndexFromCoord(x: number, y: number): number {
-    switch (this.shape) {
-      case Shape.Square: {
-        return y * this.tiles_per_row + x;
-      }
-      case Shape.Hexagon: {
-        return y * this.tiles_per_row + x;
-      }
-      default: throw new AssertionFailure();
-    }
+    return y * this.tiles_per_row + x;
   }
 
   getTileCoordFromIndex(location: number): Coord {
@@ -286,69 +281,29 @@ class Level {
   }
 
   reverseDirection(direction: number): number {
-    switch (this.shape) {
-      case Shape.Square: {
-        return 0xf & (
-          (direction << 2) |
-          (direction >> 2)
-        );
-      }
-      case Shape.Hexagon: {
-        return 0x3f & (
-          (direction << 3) |
-          (direction >> 3)
-        );
-      }
-      default: throw new AssertionFailure();
-    }
+    const times = this.edges_per_tile / 2;
+    return this.rotateValue(direction, times);
   }
 
-  rotateTile(tile_index: number): void {
-    switch (this.shape) {
-      case Shape.Square: {
-        for (let color_index = 0; color_index < this.color_count; color_index++) {
-          let color_value = this.tiles[tile_index].colors[color_index];
-          color_value = 0xf & ((color_value << 1) | (color_value >> 3));
-          this.tiles[tile_index].colors[color_index] = color_value;
-        }
-        break;
-      }
-      case Shape.Hexagon: {
-        for (let color_index = 0; color_index < this.color_count; color_index++) {
-          let color_value = this.tiles[tile_index].colors[color_index];
-          color_value = 0x3f & ((color_value << 1) | (color_value >> 5));
-          this.tiles[tile_index].colors[color_index] = color_value;
-        }
-        break;
-      }
-      default: throw new AssertionFailure();
+  rotateValue(value: number, times: number): number {
+    times = euclideanMod(times, this.edges_per_tile);
+    const mask = (1 << this.edges_per_tile) - 1;
+    return mask & (
+      (value << times) |
+      (value >> (this.edges_per_tile - times))
+    );
+  }
+
+  rotateTile(tile_index: number, times: number): void {
+    for (let color_index = 0; color_index < this.color_count; color_index++) {
+      let color_value = this.tiles[tile_index].colors[color_index];
+      color_value = this.rotateValue(color_value, times);
+      this.tiles[tile_index].colors[color_index] = color_value;
     }
   }
 
   rotateRandomly(tile_index: number): void {
-    switch (this.shape) {
-      case Shape.Square: {
-        const rotations = Math.floor(Math.random() * 4);
-        if (rotations === 0) return;
-        for (let color_index = 0; color_index < this.color_count; color_index++) {
-          let color_value = this.tiles[tile_index].colors[color_index];
-          color_value = 0xf & ((color_value << rotations) | (color_value >> (4 - rotations)));
-          this.tiles[tile_index].colors[color_index] = color_value;
-        }
-        break;
-      }
-      case Shape.Hexagon: {
-        const rotations = Math.floor(Math.random() * 6);
-        if (rotations === 0) return;
-        for (let color_index = 0; color_index < this.color_count; color_index++) {
-          let color_value = this.tiles[tile_index].colors[color_index];
-          color_value = 0x3f & ((color_value << rotations) | (color_value >> (6 - rotations)));
-          this.tiles[tile_index].colors[color_index] = color_value;
-        }
-        break;
-      }
-      default: throw new AssertionFailure();
-    }
+    this.rotateTile(tile_index, Math.floor(Math.random() * this.edges_per_tile));
   }
 
   renderGridLines(context: CanvasRenderingContext2D): void {
@@ -996,7 +951,7 @@ canvas.addEventListener("mousedown", function(event: MouseEvent) {
   }
 
   const tile_index = level.getTileIndexFromDisplayPoint(wrapped_display_x, wrapped_display_y);
-  if (!rotateTile(tile_index)) return;
+  if (!clickTile(tile_index)) return;
   animateIntoRotation(tile_index);
 });
 
@@ -1096,10 +1051,10 @@ const cheatcode_sequence = [
   6, 5, 6, 5, 9, 10, 9,
 ];
 let cheatcode_index = 0;
-function rotateTile(tile_index: number): boolean {
+function clickTile(tile_index: number): boolean {
   if (!level.isInBounds(tile_index)) return false;
   if (!level.touchCement(tile_index)) return false;
-  level.rotateTile(tile_index);
+  level.rotateTile(tile_index, 1);
 
   renderEverything();
 
