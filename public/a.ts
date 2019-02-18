@@ -56,6 +56,12 @@ abstract class Level {
   toroidal: boolean;
   tiles: Tile[];
 
+  scale_x: number;
+  scale_y: number;
+  offset_x: number;
+  offset_y: number;
+  tile_animation_time: number;
+
   constructor(parameters: LevelParameters, tiles?: Tile[]) {
     this.tiles_per_row = parameters.size[0];
     this.tiles_per_column = parameters.size[1];
@@ -96,13 +102,25 @@ abstract class Level {
     for (let tile of this.tiles) {
       assert(tile.colors.length === this.color_count);
     }
-  }
 
-  abstract getScaleX(): number;
-  abstract getScaleY(): number;
-  abstract getOffsetX(): number;
-  abstract getOffsetY(): number;
-  abstract getTileAnimationTime(): number;
+    switch (this.shape) {
+      case Shape.Square:
+        this.scale_x = 1;
+        this.scale_y = 1;
+        this.offset_x = 0;
+        this.offset_y = 0;
+        this.tile_animation_time = 150;
+        break;
+      case Shape.Hexagon:
+        this.scale_x = 1.5;
+        this.scale_y = sqrt3;
+        this.offset_x = -0.5;
+        this.offset_y = 0;
+        this.tile_animation_time = 120;
+        break;
+      default: throw new AssertionFailure();
+    }
+  }
 
   abstract getTileIndexFromDisplayPoint(display_x: number, display_y: number): number;
   abstract getTileIndexFromCoord(x: number, y: number): number;
@@ -211,19 +229,19 @@ abstract class Level {
       let endpoint_style: EndpointStyle;
       if (this.color_count === 1) {
         context.strokeStyle = "#000";
-        context.lineWidth = level.getScaleX() * 0.1;
+        context.lineWidth = level.scale_x * 0.1;
         endpoint_style = EndpointStyle.LargeRing;
       } else if (this.color_count === 2 && !this.allow_overlap) {
         switch (color_index) {
           case 0:
             context.strokeStyle = "#99f";
-            context.lineWidth = level.getScaleX() * 0.2;
+            context.lineWidth = level.scale_x * 0.2;
             endpoint_style = EndpointStyle.LargeDot;
             context.fillStyle = context.strokeStyle;
             break;
           case 1:
             context.strokeStyle = "#c06";
-            context.lineWidth = level.getScaleX() * 0.075;
+            context.lineWidth = level.scale_x * 0.075;
             endpoint_style = EndpointStyle.SmallRing;
             break;
           default: throw new AssertionFailure();
@@ -232,7 +250,7 @@ abstract class Level {
         switch (color_index) {
           case 0:
             context.strokeStyle = "#e784e1";
-            context.lineWidth = level.getScaleX() * 0.4;
+            context.lineWidth = level.scale_x * 0.4;
             context.lineCap = "butt";
             context.lineJoin = "miter";
             endpoint_style = EndpointStyle.LargeDot;
@@ -240,7 +258,7 @@ abstract class Level {
             break;
           case 1:
             context.strokeStyle = "#000caa";
-            context.lineWidth = level.getScaleX() * 0.075;
+            context.lineWidth = level.scale_x * 0.075;
             endpoint_style = EndpointStyle.LargeRing;
             break;
           default: throw new AssertionFailure();
@@ -260,10 +278,10 @@ abstract class Level {
 
     // toroidal guide
     if (this.toroidal) {
-      let left = this.getOffsetX();
-      let right = left + this.tiles_per_row * this.getScaleX();
-      let top = this.getOffsetY();
-      let bottom = top + this.tiles_per_column * this.getScaleY();
+      let left = this.offset_x;
+      let right = left + this.tiles_per_row * this.scale_x;
+      let top = this.offset_y;
+      let bottom = top + this.tiles_per_column * this.scale_y;
       context.strokeStyle = "rgba(0,0,0,0.5)";
       context.lineWidth = 0.05;
       context.lineCap = "round";
@@ -302,12 +320,6 @@ class SquareLevel extends Level {
   // 4   1
   //   2
   // the length of each edge is 1 unit.
-
-  getScaleX() { return 1; }
-  getScaleY() { return 1; }
-  getOffsetX() { return 0; }
-  getOffsetY() { return 0; }
-  getTileAnimationTime() { return 150; }
 
   getTileIndexFromDisplayPoint(display_x: number, display_y: number): number {
     return this.getTileIndexFromCoord(Math.floor(display_x), Math.floor(display_y));
@@ -522,12 +534,6 @@ class HexagonLevel extends Level {
   //    02
   // the length of each edge is 1 unit.
   // the height of a hexagon is sqrt3.
-
-  getScaleX() { return 1.5; }
-  getScaleY() { return sqrt3; }
-  getOffsetX() { return -0.5; }
-  getOffsetY() { return 0; }
-  getTileAnimationTime() { return 120; }
 
   getTileIndexFromDisplayPoint(display_x: number, display_y: number): number {
     // we could do some fancy math to figure out which space it is.
@@ -962,8 +968,8 @@ canvas.addEventListener("mousedown", function(event: MouseEvent) {
   const display_x = (event.x - origin_x) / scale;
   const display_y = (event.y - origin_y) / scale;
 
-  const wrapped_display_x = euclideanMod(display_x, level.tiles_per_row * level.getScaleX());
-  const wrapped_display_y = euclideanMod(display_y, level.tiles_per_column * level.getScaleY());
+  const wrapped_display_x = euclideanMod(display_x, level.tiles_per_row * level.scale_x);
+  const wrapped_display_y = euclideanMod(display_y, level.tiles_per_column * level.scale_y);
   if (!level.toroidal) {
     // make sure the click is in bounds
     if (display_x !== wrapped_display_x || display_y !== wrapped_display_y) return;
@@ -977,7 +983,7 @@ canvas.addEventListener("mousedown", function(event: MouseEvent) {
 let tile_rotation_animations: {[index:number]:{rotation:number,cancelled:boolean}} = {};
 function animateIntoRotation(tile_index: number) {
   const start_time = new Date().getTime();
-  const total_time = level.getTileAnimationTime();
+  const total_time = level.tile_animation_time;
   let existing_animation = tile_rotation_animations[tile_index];
   if (existing_animation) existing_animation.cancelled = true;
   let animation = {rotation: -1, cancelled: false};
@@ -1009,8 +1015,8 @@ function handleResize() {
   buffer_canvas.width = canvas.width;
   buffer_canvas.height = canvas.height;
 
-  const level_scale_x = level.getScaleX();
-  const level_scale_y = level.getScaleY();
+  const level_scale_x = level.scale_x;
+  const level_scale_y = level.scale_y;
   // cut off half of the border tiles
   const display_width = level_scale_x * level.getDisplayTileCountX();
   const display_height = level_scale_y * level.getDisplayTileCountY();
@@ -1027,8 +1033,8 @@ function handleResize() {
   if (level instanceof HexagonLevel && level.toroidal) {
     // the coordinate system works well in the code,
     // but it looks slightly off to the human eye.
-    center_x += level.getOffsetX();
-    center_y += level.getOffsetY();
+    center_x += level.offset_x;
+    center_y += level.offset_y;
   }
 
   origin_x = canvas.width / 2 - scale * center_x;
