@@ -705,20 +705,37 @@ abstract class Level {
     }
   }
 
-  abstract renderTileBackground(context: CanvasRenderingContext2D, x: number, y: number): void;
-  //{
-  //  switch (this.shape) {
-  //    case Shape.Square: {
-  //      asdf
-  //      break;
-  //    }
-  //    case Shape.Hexagon: {
-  //      asdf
-  //      break;
-  //    }
-  //    default: throw new AssertionFailure();
-  //  }
-  //}
+  renderTileBackground(context: CanvasRenderingContext2D, x: number, y: number): void {
+    switch (this.shape) {
+      case Shape.Square: {
+        context.fillRect(x, y, 1, 1);
+        break;
+      }
+      case Shape.Hexagon: {
+        context.save();
+        try {
+          if (x & 1) {
+            context.translate(1.5 * x + 1, sqrt3 * (y + 1.0));
+          } else {
+            context.translate(1.5 * x + 1, sqrt3 * (y + 0.5));
+          }
+          context.beginPath();
+          context.moveTo(-0.5, -sqrt3/2);
+          context.lineTo(0.5, -sqrt3/2);
+          context.lineTo(1, 0);
+          context.lineTo(0.5, sqrt3/2);
+          context.lineTo(-0.5, sqrt3/2);
+          context.lineTo(-1, 0);
+          context.lineTo(-0.5, -sqrt3/2);
+          context.fill();
+        } finally {
+          context.restore();
+        }
+        break;
+      }
+      default: throw new AssertionFailure();
+    }
+  }
 
   getDisplayTileCountX(): number { return this.toroidal ? this.tiles_per_row    + 3 : this.tiles_per_row    - 1; }
   getDisplayTileCountY(): number { return this.toroidal ? this.tiles_per_column + 3 : this.tiles_per_column - 1; }
@@ -905,11 +922,6 @@ class SquareLevel extends Level {
   // 4   1
   //   2
   // the length of each edge is 1 unit.
-
-
-  renderTileBackground(context: CanvasRenderingContext2D, x: number, y: number) {
-    context.fillRect(x, y, 1, 1);
-  }
 }
 
 class HexagonLevel extends Level {
@@ -931,28 +943,6 @@ class HexagonLevel extends Level {
   //    02
   // the length of each edge is 1 unit.
   // the height of a hexagon is sqrt3.
-
-  renderTileBackground(context: CanvasRenderingContext2D, x: number, y: number) {
-    context.save();
-    try {
-      if (x & 1) {
-        context.translate(1.5 * x + 1, sqrt3 * (y + 1.0));
-      } else {
-        context.translate(1.5 * x + 1, sqrt3 * (y + 0.5));
-      }
-      context.beginPath();
-      context.moveTo(-0.5, -sqrt3/2);
-      context.lineTo(0.5, -sqrt3/2);
-      context.lineTo(1, 0);
-      context.lineTo(0.5, sqrt3/2);
-      context.lineTo(-0.5, sqrt3/2);
-      context.lineTo(-1, 0);
-      context.lineTo(-0.5, -sqrt3/2);
-      context.fill();
-    } finally {
-      context.restore();
-    }
-  }
 }
 
 let level: Level;
