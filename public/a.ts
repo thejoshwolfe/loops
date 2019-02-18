@@ -1225,17 +1225,17 @@ function getLevelForNumber(level_number: number): Level {
       return generateLevel({size:[9, 9], shape: Shape.Hexagon, colors: ColorRules.Single, cement_mode: true, rough: true});
 
     case 6:
-      return generateLevel({size:[6, 6], shape: Shape.Square, colors: ColorRules.TwoOverlap, toroidal: true});
+      return generateLevel({size:[6, 6], shape: Shape.Square, colors: ColorRules.TwoOverlap, toroidal: true, rough: true});
     case 7:
-      return generateLevel({size:[6, 6], shape: Shape.Square, colors: ColorRules.TwoSeparate, toroidal: true});
+      return generateLevel({size:[6, 6], shape: Shape.Square, colors: ColorRules.TwoSeparate, toroidal: true, rough: true});
     case 8:
-      return generateLevel({size:[6, 6], shape: Shape.Square, colors: ColorRules.Single, toroidal: true});
+      return generateLevel({size:[6, 6], shape: Shape.Square, colors: ColorRules.Single, toroidal: true, rough: true});
     case 9:
-      return generateLevel({size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.TwoOverlap, toroidal: true});
+      return generateLevel({size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.TwoOverlap, toroidal: true, rough: true});
     case 10:
-      return generateLevel({size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.TwoSeparate, toroidal: true});
+      return generateLevel({size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.TwoSeparate, toroidal: true, rough: true});
     case 11:
-      return generateLevel({size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.Single, toroidal: true});
+      return generateLevel({size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.Single, toroidal: true, rough: true});
 
     default:
       throw new AssertionFailure();
@@ -1259,6 +1259,38 @@ function generateLevel(parameters: LevelParameters, tiles?: Tile[]): Level {
     }
   }
 
+  if (level.rough && level.toroidal) {
+    // there are no border tiles for rough edges,
+    // so freeze some tiles in the center.
+    switch (level.shape) {
+      case Shape.Square: {
+        // 1 tile for odd and 2 for even.
+        for (let y = Math.floor((level.tiles_per_column - 1) / 2); y <= Math.floor(level.tiles_per_column / 2); y++) {
+          for (let x = Math.floor((level.tiles_per_row - 1) / 2); x <= Math.floor(level.tiles_per_row / 2); x++) {
+            const tile_index = level.getTileIndexFromCoord(x, y);
+            level.frozen_tiles[tile_index] = true;
+          }
+        }
+        break;
+      }
+      case Shape.Hexagon: {
+        if (level.tiles_per_row & 1) {
+          throw new AssertionFailure(); // TODO: odd width hex toroid
+        } else {
+          if (level.tiles_per_column & 1) {
+            throw new AssertionFailure(); // TODO: decide what to do here
+          } else {
+            level.frozen_tiles[level.getTileIndexFromCoord(level.tiles_per_row / 2 - 1, level.tiles_per_column / 2 - 1)] = true;
+            level.frozen_tiles[level.getTileIndexFromCoord(level.tiles_per_row / 2 - 2, level.tiles_per_column / 2 - 1)] = true;
+            level.frozen_tiles[level.getTileIndexFromCoord(level.tiles_per_row / 2 - 0, level.tiles_per_column / 2 - 1)] = true;
+            level.frozen_tiles[level.getTileIndexFromCoord(level.tiles_per_row / 2 - 1, level.tiles_per_column / 2 - 0)] = true;
+          }
+        }
+        break;
+      }
+    }
+  }
+
   if (tiles) {
     // tiles already ready to use
     assert(level.tiles_per_row * level.tiles_per_column === tiles.length);
@@ -1276,11 +1308,11 @@ function generateLevel(parameters: LevelParameters, tiles?: Tile[]): Level {
     );
     for (let vector of level.allEdges()) {
       const other_tile = level.getTileIndexFromVector(vector.tile_index, vector.direction);
-      const frozen_count = +!!level.frozen_tiles[vector.tile_index] + +!!level.frozen_tiles[other_tile];
+      const out_of_bounds_count = +!level.isInBounds(vector.tile_index) + +!level.isInBounds(other_tile);
       if (level.rough) {
-        if (frozen_count >= 2) continue;
+        if (out_of_bounds_count >= 2) continue;
       } else {
-        if (frozen_count >= 1) continue;
+        if (out_of_bounds_count >= 1) continue;
       }
       let edge_value = Math.floor(Math.random() * possible_edge_values);
       for (let color_index = 0; color_index < level.color_count; color_index++) {
