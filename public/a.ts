@@ -103,7 +103,6 @@ class Level {
     this.frozen_tiles = {};
     this.toroidal = parameters.toroidal || false;
     this.rough = parameters.rough || false;
-    this.rough = true;
 
     switch (parameters.colors) {
       case ColorRules.Single:
@@ -1200,30 +1199,30 @@ function getLevelForNumber(level_number: number): Level {
     case 10:
       return generateLevel({size:[7, 7], shape: Shape.Square, colors: ColorRules.TwoSeparate});
     case 11:
-      return generateLevel({size:[9, 9], shape: Shape.Square, colors: ColorRules.TwoSeparate});
+      return generateLevel({size:[9, 9], shape: Shape.Square, colors: ColorRules.TwoSeparate, rough: true});
     case 12:
       return generateLevel({size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.TwoSeparate});
     case 13:
-      return generateLevel({size:[8, 8], shape: Shape.Hexagon, colors: ColorRules.TwoSeparate});
+      return generateLevel({size:[8, 8], shape: Shape.Hexagon, colors: ColorRules.TwoSeparate, rough: true});
     case 14:
       return generateLevel({size:[9, 9], shape: Shape.Square, colors: ColorRules.TwoOverlap});
     case 15:
-      return generateLevel({size:[8, 8], shape: Shape.Hexagon, colors: ColorRules.TwoOverlap});
+      return generateLevel({size:[8, 8], shape: Shape.Hexagon, colors: ColorRules.TwoOverlap, rough: true});
   }
   // loop
   switch ((level_number - 16) % 12) {
     case 0:
-      return generateLevel({size:[10, 10], shape: Shape.Square, colors: ColorRules.TwoOverlap, cement_mode: true});
+      return generateLevel({size:[10, 10], shape: Shape.Square, colors: ColorRules.TwoOverlap, cement_mode: true, rough: true});
     case 1:
-      return generateLevel({size:[9, 9], shape: Shape.Hexagon, colors: ColorRules.TwoOverlap, cement_mode: true});
+      return generateLevel({size:[9, 9], shape: Shape.Hexagon, colors: ColorRules.TwoOverlap, cement_mode: true, rough: true});
     case 2:
-      return generateLevel({size:[10, 10], shape: Shape.Square, colors: ColorRules.TwoSeparate, cement_mode: true});
+      return generateLevel({size:[10, 10], shape: Shape.Square, colors: ColorRules.TwoSeparate, cement_mode: true, rough: true});
     case 3:
-      return generateLevel({size:[9, 9], shape: Shape.Hexagon, colors: ColorRules.TwoSeparate, cement_mode: true});
+      return generateLevel({size:[9, 9], shape: Shape.Hexagon, colors: ColorRules.TwoSeparate, cement_mode: true, rough: true});
     case 4:
-      return generateLevel({size:[10, 10], shape: Shape.Square, colors: ColorRules.Single, cement_mode: true});
+      return generateLevel({size:[10, 10], shape: Shape.Square, colors: ColorRules.Single, cement_mode: true, rough: true});
     case 5:
-      return generateLevel({size:[9, 9], shape: Shape.Hexagon, colors: ColorRules.Single, cement_mode: true});
+      return generateLevel({size:[9, 9], shape: Shape.Hexagon, colors: ColorRules.Single, cement_mode: true, rough: true});
 
     case 6:
       return generateLevel({size:[6, 6], shape: Shape.Square, colors: ColorRules.TwoOverlap, toroidal: true});
@@ -1277,7 +1276,7 @@ function generateLevel(parameters: LevelParameters, tiles?: Tile[]): Level {
     );
     for (let vector of level.allEdges()) {
       const other_tile = level.getTileIndexFromVector(vector.tile_index, vector.direction);
-      const frozen_count = +level.frozen_tiles[vector.tile_index] + +level.frozen_tiles[other_tile];
+      const frozen_count = +!!level.frozen_tiles[vector.tile_index] + +!!level.frozen_tiles[other_tile];
       if (level.rough) {
         if (frozen_count >= 2) continue;
       } else {
