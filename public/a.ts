@@ -68,6 +68,7 @@ interface LevelParameters {
   colors: ColorRules,
   cement_mode?: boolean,
   toroidal?: boolean,
+  rough?: boolean,
 };
 
 class Level {
@@ -80,6 +81,7 @@ class Level {
   color_count: number;
   allow_overlap: boolean;
   toroidal: boolean;
+  rough: boolean;
   tiles: Tile[];
 
   scale_x: number;
@@ -93,10 +95,11 @@ class Level {
     this.tiles_per_row = parameters.size[0];
     this.tiles_per_column = parameters.size[1];
     this.shape = parameters.shape;
-    this.cement_mode = !!parameters.cement_mode;
+    this.cement_mode = parameters.cement_mode || false;
     this.recent_touch_queue = [];
     this.frozen_tiles = {};
     this.toroidal = parameters.toroidal || false;
+    this.rough = parameters.rough || false;
 
     switch (parameters.colors) {
       case ColorRules.Single:
@@ -770,7 +773,7 @@ class Level {
     context.stroke();
 
     // tile background
-    if (this.cement_mode) {
+    if (this.cement_mode || this.rough) {
       for (let location of this.allTileIndexes()) {
         if (level.frozen_tiles[location]) {
           context.fillStyle = "#ccc";
@@ -1253,8 +1256,12 @@ function generateLevel(parameters: LevelParameters, tiles?: Tile[]): Level {
     );
     for (let vector of level.allEdges()) {
       const other_tile = level.getTileIndexFromVector(vector.tile_index, vector.direction);
-      const out_of_bounds = level.frozen_tiles[vector.tile_index] || level.frozen_tiles[other_tile];
-      if (out_of_bounds) continue;
+      const frozen_count = +level.frozen_tiles[vector.tile_index] + +level.frozen_tiles[other_tile];
+      if (level.rough) {
+        if (frozen_count >= 2) continue;
+      } else {
+        if (frozen_count >= 1) continue;
+      }
       let edge_value = Math.floor(Math.random() * possible_edge_values);
       for (let color_index = 0; color_index < level.color_count; color_index++) {
         if (edge_value & (1 << color_index)) {
