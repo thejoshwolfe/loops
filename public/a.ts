@@ -918,8 +918,30 @@ sidebar_button.addEventListener("mousedown", function(event: MouseEvent) {
   }
 });
 window.addEventListener("keydown", function(event: KeyboardEvent) {
-  if (isSidebarShowing() && event.keyCode === 27) {
-    hideSidebar();
+  if (event.altKey || event.ctrlKey) return;
+  switch (event.code) {
+    case "Escape":
+      if (isSidebarShowing()) hideSidebar();
+      break;
+
+    // cheatcodes to navigate levels
+    case "BracketRight":
+      if (event.shiftKey) {
+        level_number += 6;
+      } else {
+        level_number += 1;
+      }
+      loadNewLevel();
+      break;
+    case "BracketLeft":
+      if (event.shiftKey) {
+        level_number -= 6;
+      } else {
+        level_number -= 1;
+      }
+      if (level_number <= 0) level_number = 1;
+      loadNewLevel();
+      break;
   }
 });
 canvas.addEventListener("mousedown", function(event: MouseEvent) {
