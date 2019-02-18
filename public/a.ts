@@ -165,24 +165,19 @@ abstract class Level {
     }
   }
 
-  getTileCoordFromIndex(location: number): Coord; {
+  getTileCoordFromIndex(location: number): Coord {
     const x = location % this.tiles_per_row;
     const y = (location - x) / this.tiles_per_row;
     return {x, y};
   }
 
-  abstract allTileIndexes(): number[];
-  //{
-  //  switch (this.shape) {
-  //    case Shape.Square: {
-  //      asdf
-  //    }
-  //    case Shape.Hexagon: {
-  //      asdf
-  //    }
-  //    default: throw new AssertionFailure();
-  //  }
-  //}
+  allTileIndexes(): number[] {
+    let result: number[] = [];
+    for (let i = 0; i < this.tiles.length; i++) {
+      result.push(i);
+    }
+    return result;
+  }
 
   abstract allEdges(): Vector[];
   //{
@@ -474,13 +469,6 @@ class SquareLevel extends Level {
   //   2
   // the length of each edge is 1 unit.
 
-  allTileIndexes(): number[] {
-    let result: number[] = [];
-    for (let i = 0; i < this.tiles.length; i++) {
-      result.push(i);
-    }
-    return result;
-  }
   allEdges(): Vector[] {
     let result: Vector[] = [];
     for (let y = 0; y < this.tiles_per_column; y++) {
@@ -674,13 +662,6 @@ class HexagonLevel extends Level {
   // the length of each edge is 1 unit.
   // the height of a hexagon is sqrt3.
 
-  allTileIndexes(): number[] {
-    let result: number[] = [];
-    for (let i = 0; i < this.tiles.length; i++) {
-      result.push(i);
-    }
-    return result;
-  }
   allEdges(): Vector[] {
     let result: Vector[] = [];
     for (let y = 0; y < this.tiles_per_column; y++) {
