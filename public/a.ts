@@ -166,14 +166,122 @@ abstract class Level {
   }
 
   abstract getTileCoordFromIndex(location: number): Coord;
+  //{
+  //  switch (this.shape) {
+  //    case Shape.Square: {
+  //      asdf
+  //    }
+  //    case Shape.Hexagon: {
+  //      asdf
+  //    }
+  //    default: throw new AssertionFailure();
+  //  }
+  //}
+
   abstract allTileIndexes(): number[];
+  //{
+  //  switch (this.shape) {
+  //    case Shape.Square: {
+  //      asdf
+  //    }
+  //    case Shape.Hexagon: {
+  //      asdf
+  //    }
+  //    default: throw new AssertionFailure();
+  //  }
+  //}
+
   abstract allEdges(): Vector[];
+  //{
+  //  switch (this.shape) {
+  //    case Shape.Square: {
+  //      asdf
+  //    }
+  //    case Shape.Hexagon: {
+  //      asdf
+  //    }
+  //    default: throw new AssertionFailure();
+  //  }
+  //}
+
   abstract getTileIndexFromVector(tile_index: number, direction: number): number;
+  //{
+  //  switch (this.shape) {
+  //    case Shape.Square: {
+  //      asdf
+  //    }
+  //    case Shape.Hexagon: {
+  //      asdf
+  //    }
+  //    default: throw new AssertionFailure();
+  //  }
+  //}
+
   abstract reverseDirection(direction: number): number;
+  //{
+  //  switch (this.shape) {
+  //    case Shape.Square: {
+  //      asdf
+  //    }
+  //    case Shape.Hexagon: {
+  //      asdf
+  //    }
+  //    default: throw new AssertionFailure();
+  //  }
+  //}
+
   abstract rotateTile(tile_index: number): void;
+  //{
+  //  switch (this.shape) {
+  //    case Shape.Square: {
+  //      asdf
+  //    }
+  //    case Shape.Hexagon: {
+  //      asdf
+  //    }
+  //    default: throw new AssertionFailure();
+  //  }
+  //}
+
   abstract rotateRandomly(tile_index: number): void;
+  //{
+  //  switch (this.shape) {
+  //    case Shape.Square: {
+  //      asdf
+  //    }
+  //    case Shape.Hexagon: {
+  //      asdf
+  //    }
+  //    default: throw new AssertionFailure();
+  //  }
+  //}
+
   abstract renderGridLines(context: CanvasRenderingContext2D): void;
+  //{
+  //  switch (this.shape) {
+  //    case Shape.Square: {
+  //      asdf
+  //    }
+  //    case Shape.Hexagon: {
+  //      asdf
+  //    }
+  //    default: throw new AssertionFailure();
+  //  }
+  //}
+
   abstract renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number, animation_progress: number, endpoint_style: EndpointStyle): void;
+  //{
+  //  switch (this.shape) {
+  //    case Shape.Square: {
+  //      asdf
+  //    }
+  //    case Shape.Hexagon: {
+  //      asdf
+  //    }
+  //    default: throw new AssertionFailure();
+  //  }
+  //}
+
   abstract renderTileBackground(context: CanvasRenderingContext2D, x: number, y: number): void;
   //{
   //  switch (this.shape) {
