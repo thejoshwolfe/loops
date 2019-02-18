@@ -279,18 +279,27 @@ abstract class Level {
     }
   }
 
-  abstract rotateTile(tile_index: number): void;
-  //{
-  //  switch (this.shape) {
-  //    case Shape.Square: {
-  //      asdf
-  //    }
-  //    case Shape.Hexagon: {
-  //      asdf
-  //    }
-  //    default: throw new AssertionFailure();
-  //  }
-  //}
+  rotateTile(tile_index: number): void {
+    switch (this.shape) {
+      case Shape.Square: {
+        for (let color_index = 0; color_index < this.color_count; color_index++) {
+          let color_value = this.tiles[tile_index].colors[color_index];
+          color_value = 0xf & ((color_value << 1) | (color_value >> 3));
+          this.tiles[tile_index].colors[color_index] = color_value;
+        }
+        break;
+      }
+      case Shape.Hexagon: {
+        for (let color_index = 0; color_index < this.color_count; color_index++) {
+          let color_value = this.tiles[tile_index].colors[color_index];
+          color_value = 0x3f & ((color_value << 1) | (color_value >> 5));
+          this.tiles[tile_index].colors[color_index] = color_value;
+        }
+        break;
+      }
+      default: throw new AssertionFailure();
+    }
+  }
 
   abstract rotateRandomly(tile_index: number): void;
   //{
@@ -530,14 +539,6 @@ class SquareLevel extends Level {
   //   2
   // the length of each edge is 1 unit.
 
-  rotateTile(tile_index: number) {
-    for (let color_index = 0; color_index < this.color_count; color_index++) {
-      let color_value = this.tiles[tile_index].colors[color_index];
-      color_value = 0xf & ((color_value << 1) | (color_value >> 3));
-      this.tiles[tile_index].colors[color_index] = color_value;
-    }
-  }
-
   rotateRandomly(tile_index: number) {
     const rotations = Math.floor(Math.random() * 4);
     if (rotations === 0) return;
@@ -692,14 +693,6 @@ class HexagonLevel extends Level {
   //    02
   // the length of each edge is 1 unit.
   // the height of a hexagon is sqrt3.
-
-  rotateTile(tile_index: number) {
-    for (let color_index = 0; color_index < this.color_count; color_index++) {
-      let color_value = this.tiles[tile_index].colors[color_index];
-      color_value = 0x3f & ((color_value << 1) | (color_value >> 5));
-      this.tiles[tile_index].colors[color_index] = color_value;
-    }
-  }
 
   rotateRandomly(tile_index: number) {
     const rotations = Math.floor(Math.random() * 6);
