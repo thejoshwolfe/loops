@@ -153,7 +153,18 @@ abstract class Level {
     }
   }
 
-  abstract getTileIndexFromCoord(x: number, y: number): number;
+  getTileIndexFromCoord(x: number, y: number): number {
+    switch (this.shape) {
+      case Shape.Square: {
+        return y * this.tiles_per_row + x;
+      }
+      case Shape.Hexagon: {
+        return y * this.tiles_per_row + x;
+      }
+      default: throw new AssertionFailure();
+    }
+  }
+
   abstract getTileCoordFromIndex(location: number): Coord;
   abstract allTileIndexes(): number[];
   abstract allEdges(): Vector[];
@@ -164,6 +175,17 @@ abstract class Level {
   abstract renderGridLines(context: CanvasRenderingContext2D): void;
   abstract renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number, animation_progress: number, endpoint_style: EndpointStyle): void;
   abstract renderTileBackground(context: CanvasRenderingContext2D, x: number, y: number): void;
+  //{
+  //  switch (this.shape) {
+  //    case Shape.Square: {
+  //      asdf
+  //    }
+  //    case Shape.Hexagon: {
+  //      asdf
+  //    }
+  //    default: throw new AssertionFailure();
+  //  }
+  //}
 
   getDisplayTileCountX(): number { return this.toroidal ? this.tiles_per_row    + 3 : this.tiles_per_row    - 1; }
   getDisplayTileCountY(): number { return this.toroidal ? this.tiles_per_column + 3 : this.tiles_per_column - 1; }
@@ -350,10 +372,6 @@ class SquareLevel extends Level {
   // 4   1
   //   2
   // the length of each edge is 1 unit.
-
-  getTileIndexFromCoord(x: number, y: number): number {
-    return y * this.tiles_per_row + x;
-  }
 
   getTileCoordFromIndex(location: number): Coord {
     const x = location % this.tiles_per_row;
@@ -560,10 +578,6 @@ class HexagonLevel extends Level {
   //    02
   // the length of each edge is 1 unit.
   // the height of a hexagon is sqrt3.
-
-  getTileIndexFromCoord(x: number, y: number): number {
-    return y * this.tiles_per_row + x;
-  }
 
   getTileCoordFromIndex(location: number): Coord {
     const x = location % this.tiles_per_row;
