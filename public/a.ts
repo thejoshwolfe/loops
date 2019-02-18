@@ -122,7 +122,37 @@ abstract class Level {
     }
   }
 
-  abstract getTileIndexFromDisplayPoint(display_x: number, display_y: number): number;
+  getTileIndexFromDisplayPoint(display_x: number, display_y: number): number {
+    switch (this.shape) {
+      case Shape.Square: {
+        return this.getTileIndexFromCoord(Math.floor(display_x), Math.floor(display_y));
+      }
+      case Shape.Hexagon: {
+        // we could do some fancy math to figure out which space it is.
+        // ... or ... we could get close and just do some euclidean distance measurements.
+        const general_neighborhood_x = Math.floor(display_x / 1.5);
+        const general_neighborhood_y = Math.floor(display_y / sqrt3);
+
+        let closest_distance_squared = Infinity;
+        let closest_tile: number = NaN;
+        for (let x of [general_neighborhood_x - 1, general_neighborhood_x, general_neighborhood_x + 1]) {
+          for (let y of [general_neighborhood_y - 1, general_neighborhood_y, general_neighborhood_y + 1]) {
+            const center_x = 1.5 * x + 1;
+            const center_y = sqrt3 * (y + ((x & 1) ? 1 : 0.5));
+            const distance_squared = (display_y - center_y)**2 + (display_x - center_x)**2;
+            if (distance_squared < closest_distance_squared) {
+              closest_distance_squared = distance_squared;
+              closest_tile = this.getTileIndexFromCoord(euclideanMod(x, this.tiles_per_row), euclideanMod(y, this.tiles_per_column));
+            }
+          }
+        }
+        assert(!isNaN(closest_tile));
+        return closest_tile;
+      }
+      default: throw new AssertionFailure();
+    }
+  }
+
   abstract getTileIndexFromCoord(x: number, y: number): number;
   abstract getTileCoordFromIndex(location: number): Coord;
   abstract allTileIndexes(): number[];
@@ -320,10 +350,6 @@ class SquareLevel extends Level {
   // 4   1
   //   2
   // the length of each edge is 1 unit.
-
-  getTileIndexFromDisplayPoint(display_x: number, display_y: number): number {
-    return this.getTileIndexFromCoord(Math.floor(display_x), Math.floor(display_y));
-  }
 
   getTileIndexFromCoord(x: number, y: number): number {
     return y * this.tiles_per_row + x;
@@ -534,29 +560,6 @@ class HexagonLevel extends Level {
   //    02
   // the length of each edge is 1 unit.
   // the height of a hexagon is sqrt3.
-
-  getTileIndexFromDisplayPoint(display_x: number, display_y: number): number {
-    // we could do some fancy math to figure out which space it is.
-    // ... or ... we could get close and just do some euclidean distance measurements.
-    const general_neighborhood_x = Math.floor(display_x / 1.5);
-    const general_neighborhood_y = Math.floor(display_y / sqrt3);
-
-    let closest_distance_squared = Infinity;
-    let closest_tile: number = NaN;
-    for (let x of [general_neighborhood_x - 1, general_neighborhood_x, general_neighborhood_x + 1]) {
-      for (let y of [general_neighborhood_y - 1, general_neighborhood_y, general_neighborhood_y + 1]) {
-        const center_x = 1.5 * x + 1;
-        const center_y = sqrt3 * (y + ((x & 1) ? 1 : 0.5));
-        const distance_squared = (display_y - center_y)**2 + (display_x - center_x)**2;
-        if (distance_squared < closest_distance_squared) {
-          closest_distance_squared = distance_squared;
-          closest_tile = this.getTileIndexFromCoord(euclideanMod(x, this.tiles_per_row), euclideanMod(y, this.tiles_per_column));
-        }
-      }
-    }
-    assert(!isNaN(closest_tile));
-    return closest_tile;
-  }
 
   getTileIndexFromCoord(x: number, y: number): number {
     return y * this.tiles_per_row + x;
