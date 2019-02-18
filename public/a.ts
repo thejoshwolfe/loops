@@ -1178,18 +1178,20 @@ function getLevelForNumber(level_number: number): Level {
       return generateLevel({size:[10, 10], shape: Shape.Square, colors: ColorRules.Single, cement_mode: true});
     case 5:
       return generateLevel({size:[9, 9], shape: Shape.Hexagon, colors: ColorRules.Single, cement_mode: true});
+
     case 6:
       return generateLevel({size:[6, 6], shape: Shape.Square, colors: ColorRules.TwoOverlap, toroidal: true});
     case 7:
-      return generateLevel({size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.TwoOverlap, toroidal: true});
-    case 8:
       return generateLevel({size:[6, 6], shape: Shape.Square, colors: ColorRules.TwoSeparate, toroidal: true});
-    case 9:
-      return generateLevel({size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.TwoSeparate, toroidal: true});
-    case 10:
+    case 8:
       return generateLevel({size:[6, 6], shape: Shape.Square, colors: ColorRules.Single, toroidal: true});
+    case 9:
+      return generateLevel({size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.TwoOverlap, toroidal: true});
+    case 10:
+      return generateLevel({size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.TwoSeparate, toroidal: true});
     case 11:
       return generateLevel({size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.Single, toroidal: true});
+
     default:
       throw new AssertionFailure();
   }
