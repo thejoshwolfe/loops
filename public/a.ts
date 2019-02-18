@@ -179,18 +179,40 @@ abstract class Level {
     return result;
   }
 
-  abstract allEdges(): Vector[];
-  //{
-  //  switch (this.shape) {
-  //    case Shape.Square: {
-  //      asdf
-  //    }
-  //    case Shape.Hexagon: {
-  //      asdf
-  //    }
-  //    default: throw new AssertionFailure();
-  //  }
-  //}
+  allEdges(): Vector[] {
+    switch (this.shape) {
+      case Shape.Square: {
+        let result: Vector[] = [];
+        for (let y = 0; y < this.tiles_per_column; y++) {
+          for (let x = 0; x < this.tiles_per_row; x++) {
+            result.push({tile_index:this.getTileIndexFromCoord(x, y), direction:1});
+            result.push({tile_index:this.getTileIndexFromCoord(x, y), direction:2});
+          }
+        }
+        return result;
+      }
+      case Shape.Hexagon: {
+        let result: Vector[] = [];
+        for (let y = 0; y < this.tiles_per_column; y++) {
+          for (let x = 0; x < this.tiles_per_row; x++) {
+            let tile_index = this.getTileIndexFromCoord(x, y);
+            result.push({tile_index, direction:1});
+            result.push({tile_index, direction:2});
+            result.push({tile_index, direction:4});
+          }
+        }
+
+        let debug_no_dups: {[hash: string]: boolean} = {};
+        for (let vector of result) {
+          let hash = "" + vector.tile_index + "," + vector.direction;
+          if (debug_no_dups[hash]) throw new AssertionFailure();
+          debug_no_dups[hash] = true;
+        }
+        return result;
+      }
+      default: throw new AssertionFailure();
+    }
+  }
 
   abstract getTileIndexFromVector(tile_index: number, direction: number): number;
   //{
@@ -469,17 +491,6 @@ class SquareLevel extends Level {
   //   2
   // the length of each edge is 1 unit.
 
-  allEdges(): Vector[] {
-    let result: Vector[] = [];
-    for (let y = 0; y < this.tiles_per_column; y++) {
-      for (let x = 0; x < this.tiles_per_row; x++) {
-        result.push({tile_index:this.getTileIndexFromCoord(x, y), direction:1});
-        result.push({tile_index:this.getTileIndexFromCoord(x, y), direction:2});
-      }
-    }
-    return result;
-  }
-
   getTileIndexFromVector(tile_index: number, direction: number): number {
     let {x, y} = this.getTileCoordFromIndex(tile_index);
     switch (direction) {
@@ -661,26 +672,6 @@ class HexagonLevel extends Level {
   //    02
   // the length of each edge is 1 unit.
   // the height of a hexagon is sqrt3.
-
-  allEdges(): Vector[] {
-    let result: Vector[] = [];
-    for (let y = 0; y < this.tiles_per_column; y++) {
-      for (let x = 0; x < this.tiles_per_row; x++) {
-        let tile_index = this.getTileIndexFromCoord(x, y);
-        result.push({tile_index, direction:1});
-        result.push({tile_index, direction:2});
-        result.push({tile_index, direction:4});
-      }
-    }
-
-    let debug_no_dups: {[hash: string]: boolean} = {};
-    for (let vector of result) {
-      let hash = "" + vector.tile_index + "," + vector.direction;
-      if (debug_no_dups[hash]) throw new AssertionFailure();
-      debug_no_dups[hash] = true;
-    }
-    return result;
-  }
 
   getTileIndexFromVector(tile_index: number, direction: number): number {
     let {x, y} = this.getTileCoordFromIndex(tile_index);
