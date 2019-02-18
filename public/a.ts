@@ -165,18 +165,11 @@ abstract class Level {
     }
   }
 
-  abstract getTileCoordFromIndex(location: number): Coord;
-  //{
-  //  switch (this.shape) {
-  //    case Shape.Square: {
-  //      asdf
-  //    }
-  //    case Shape.Hexagon: {
-  //      asdf
-  //    }
-  //    default: throw new AssertionFailure();
-  //  }
-  //}
+  getTileCoordFromIndex(location: number): Coord; {
+    const x = location % this.tiles_per_row;
+    const y = (location - x) / this.tiles_per_row;
+    return {x, y};
+  }
 
   abstract allTileIndexes(): number[];
   //{
@@ -481,12 +474,6 @@ class SquareLevel extends Level {
   //   2
   // the length of each edge is 1 unit.
 
-  getTileCoordFromIndex(location: number): Coord {
-    const x = location % this.tiles_per_row;
-    const y = (location - x) / this.tiles_per_row;
-    return {x, y};
-  }
-
   allTileIndexes(): number[] {
     let result: number[] = [];
     for (let i = 0; i < this.tiles.length; i++) {
@@ -686,12 +673,6 @@ class HexagonLevel extends Level {
   //    02
   // the length of each edge is 1 unit.
   // the height of a hexagon is sqrt3.
-
-  getTileCoordFromIndex(location: number): Coord {
-    const x = location % this.tiles_per_row;
-    const y = (location - x) / this.tiles_per_row;
-    return {x, y};
-  }
 
   allTileIndexes(): number[] {
     let result: number[] = [];
