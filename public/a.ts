@@ -12,7 +12,8 @@ const sqrt3 = Math.sqrt(3);
 
 enum GameState {
   Playing,
-  FadeOut,
+  FadeOut, // auto transition
+  SmellTheRoses, // need to tap to advance
   FadeIn,
 }
 let game_state = GameState.Playing;
@@ -791,13 +792,15 @@ class Level {
 
   renderLevel(context: CanvasRenderingContext2D) {
     // grid lines
-    context.strokeStyle = "#ddd";
-    context.lineWidth = 0.03;
-    context.lineCap = "round";
-    context.lineJoin = "round";
-    context.beginPath();
-    this.renderGridLines(context);
-    context.stroke();
+    if (game_state !== GameState.SmellTheRoses) {
+      context.strokeStyle = "#ddd";
+      context.lineWidth = 0.03;
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.beginPath();
+      this.renderGridLines(context);
+      context.stroke();
+    }
 
     // tile background
     if (this.cement_mode || this.rough) {
@@ -982,7 +985,20 @@ canvas.addEventListener("mousedown", function(event: MouseEvent) {
     hideSidebar();
     return;
   }
-  if (!(game_state === GameState.Playing || game_state === GameState.FadeIn)) return;
+
+  switch (game_state) {
+    case GameState.Playing:
+    case GameState.FadeIn:
+      // continue
+      break;
+    case GameState.FadeOut:
+      // you can't do anything
+      return;
+    case GameState.SmellTheRoses:
+      smellARose();
+      return
+  }
+
   const display_x = (event.x - origin_pixel_x) / units_to_pixels;
   const display_y = (event.y - origin_pixel_y) / units_to_pixels;
 
@@ -1121,40 +1137,96 @@ function clickTile(tile_index: number): boolean {
   return true;
 }
 
+let global_alpha = 1.0;
 function checkForDone() {
   const unsolved_count = level.countUnsolved();
-  if (unsolved_count === 0) {
-    // everything is done
-    beginLevelTransition();
+  if (unsolved_count > 0) return;
+
+  // everything is done
+  // TODO:
+  if (false) {
+    game_state = GameState.FadeOut;
+    doFadeOut();
+  } else {
+    game_state = GameState.SmellTheRoses;
+    // TODO: doFadeToRoses();
   }
 }
-let global_alpha = 1.0;
-function beginLevelTransition() {
-  game_state = GameState.FadeOut;
+
+function doFadeOut() {
   const start_time = new Date().getTime();
   animate();
 
   function animate() {
+    if (game_state !== GameState.FadeOut) return;
     const progress = (new Date().getTime() - start_time) / 1000;
     if (progress < 1) {
       global_alpha = 1 - progress;
-    } else if (progress < 2) {
-      if (game_state === GameState.FadeOut) {
-        level_number++;
-        loadNewLevel();
-        game_state = GameState.FadeIn;
-      }
-      global_alpha = progress - 1;
+      requestAnimationFrame(animate);
+    } else {
+      // done
+      advanceToNextLevel();
+      doFadeIn();
+    }
+    renderEverything();
+  }
+}
+
+function doFadeIn() {
+  const start_time = new Date().getTime();
+  animate();
+
+  function animate() {
+    if (game_state !== GameState.FadeIn) return;
+    const progress = (new Date().getTime() - start_time) / 1000;
+    if (progress < 1) {
+      global_alpha = progress;
+      requestAnimationFrame(animate);
     } else {
       // done
       game_state = GameState.Playing;
       global_alpha = 1.0;
     }
     renderEverything();
-    if (game_state !== GameState.Playing) {
-      requestAnimationFrame(animate);
-    }
   }
+}
+
+// Smell the roses mode is when you get to look at the level
+// in a completed state before moving on.
+// You tap three times (smell three roses) to advance.
+let roses_smelled = 0;
+const total_roses = 3;
+let unsmell_handle = setTimeout(function(){}, 0); // example
+function smellARose() {
+  assert(game_state === GameState.SmellTheRoses);
+  clearTimeout(unsmell_handle);
+  roses_smelled += 1;
+  if (roses_smelled < total_roses) {
+    global_alpha = 1 - roses_smelled / total_roses;
+    renderEverything();
+    unsmell_handle = setTimeout(unsmellARose, 1500);
+  } else {
+    roses_smelled = 0;
+    advanceToNextLevel();
+  }
+
+  function unsmellARose() {
+    if (game_state !== GameState.SmellTheRoses || roses_smelled <= 0) return;
+    roses_smelled -= 1;
+    global_alpha = 1 - roses_smelled / total_roses;
+    if (roses_smelled > 0) {
+      unsmell_handle = setTimeout(unsmellARose, 500);
+    }
+    renderEverything();
+  }
+}
+
+
+function advanceToNextLevel() {
+  level_number++;
+  loadNewLevel();
+  game_state = GameState.FadeIn;
+  doFadeIn();
 }
 function loadNewLevel() {
   loadLevel(getLevelForNumber(level_number));
@@ -1356,7 +1428,7 @@ reset_button.addEventListener("click", function() {
 });
 
 function getSaveObject(): {[key:string]:any} {
-  let save_data_str = window.localStorage.getItem('loops');
+  let save_data_str = window.localStorage.getItem("loops");
   return save_data_str ? JSON.parse(save_data_str) : {};
 }
 function save() {
