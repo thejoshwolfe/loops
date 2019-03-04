@@ -1,7 +1,6 @@
 let level_number = 1;
 
 const canvas = document.getElementById("canvas")! as HTMLCanvasElement;
-const buffer_canvas = document.createElement("canvas");
 const sidebar_tray = document.getElementById("sidebar")!;
 const sidebar_button = document.getElementById("hamburger")!;
 const retry_button = document.getElementById("retryButton")!;
@@ -10,9 +9,32 @@ const reset_button = document.getElementById("resetButton")!;
 const pi = Math.PI;
 const sqrt3 = Math.sqrt(3);
 
+let global_alpha = 1.0;
+const buffer_canvas = document.createElement("canvas");
+let asdf_alpha = 1.0;
+const asdf_background_canvas = document.createElement("canvas");
+const tile_canvas = document.createElement("canvas");
+const asdf_foreground_canvas = document.createElement("canvas");
+
+const all_canvases = [
+  canvas,
+  buffer_canvas,
+  asdf_background_canvas,
+  tile_canvas,
+  asdf_foreground_canvas,
+];
+
+const render_target_canvases = [
+  asdf_background_canvas,
+  tile_canvas,
+  asdf_foreground_canvas,
+];
+
 enum GameState {
   Playing,
-  FadeOut,
+  FadeOut, // auto transition
+  FadeToRoses,
+  SmellTheRoses, // need to tap to advance
   FadeIn,
 }
 let game_state = GameState.Playing;
@@ -790,39 +812,6 @@ class Level {
   }
 
   renderLevel(context: CanvasRenderingContext2D) {
-    // grid lines
-    context.strokeStyle = "#ddd";
-    context.lineWidth = 0.03;
-    context.lineCap = "round";
-    context.lineJoin = "round";
-    context.beginPath();
-    this.renderGridLines(context);
-    context.stroke();
-
-    // tile background
-    if (this.cement_mode || this.rough) {
-      for (let location of this.allTileIndexes()) {
-        if (level.frozen_tiles[location]) {
-          context.fillStyle = "#ccc";
-        } else {
-          let age = level.recent_touch_queue.indexOf(location);
-          if (age === -1) continue;
-          switch (age) {
-            case 0:
-              context.fillStyle = "#eee";
-              break;
-            case 1:
-            case 2:
-              context.fillStyle = "#eee";
-              break;
-            default: throw new AssertionFailure();
-          }
-        }
-        const {x, y} = this.getTileCoordFromIndex(location);
-        this.renderTileBackgrounds(context, x, y);
-      }
-    }
-
     // tiles
     for (let color_index = 0; color_index < this.color_count; color_index++) {
       // select an appropriate line style and color
@@ -877,7 +866,47 @@ class Level {
         this.renderTiles(context, color_value, x, y, animation_progress, endpoint_style);
       }
     }
+  }
 
+  renderAsdfBackground(context: CanvasRenderingContext2D): void {
+    // grid lines
+    if (game_state !== GameState.SmellTheRoses) {
+      context.strokeStyle = "#ddd";
+      context.lineWidth = 0.03;
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.beginPath();
+      this.renderGridLines(context);
+      context.stroke();
+    }
+
+    // tile background
+    if (this.cement_mode || this.rough) {
+      for (let location of this.allTileIndexes()) {
+        if (level.frozen_tiles[location]) {
+          context.fillStyle = "#ccc";
+        } else {
+          let age = level.recent_touch_queue.indexOf(location);
+          if (age === -1) continue;
+          switch (age) {
+            case 0:
+              context.fillStyle = "#eee";
+              break;
+            case 1:
+            case 2:
+              context.fillStyle = "#eee";
+              break;
+            default: throw new AssertionFailure();
+          }
+        }
+        const {x, y} = this.getTileCoordFromIndex(location);
+        this.renderTileBackgrounds(context, x, y);
+      }
+    }
+
+  }
+
+  renderAsdfForeground(context: CanvasRenderingContext2D): void {
     // toroidal guide
     if (this.toroidal) {
       let left = this.display_offset_x;
@@ -916,12 +945,6 @@ class Level {
   }
 }
 
-let level: Level;
-function loadLevel(new_level: Level) {
-  level = new_level;
-  handleResize();
-}
-
 window.addEventListener("resize", function() {
   handleResize();
 });
@@ -957,20 +980,17 @@ window.addEventListener("keydown", function(event: KeyboardEvent) {
     // cheatcodes to navigate levels
     case "BracketRight":
       if (event.shiftKey) {
-        level_number += 6;
+        loadNewLevel(6);
       } else {
-        level_number += 1;
+        loadNewLevel(1);
       }
-      loadNewLevel();
       break;
     case "BracketLeft":
       if (event.shiftKey) {
-        level_number -= 6;
+        loadNewLevel(-6);
       } else {
-        level_number -= 1;
+        loadNewLevel(-1);
       }
-      if (level_number <= 0) level_number = 1;
-      loadNewLevel();
       break;
   }
 });
@@ -982,7 +1002,22 @@ canvas.addEventListener("mousedown", function(event: MouseEvent) {
     hideSidebar();
     return;
   }
-  if (!(game_state === GameState.Playing || game_state === GameState.FadeIn)) return;
+
+  switch (game_state) {
+    case GameState.Playing:
+    case GameState.FadeIn:
+      // continue
+      break;
+    case GameState.FadeOut:
+    case GameState.FadeToRoses:
+      // you can't do anything
+      return;
+    case GameState.SmellTheRoses:
+      // alright, time to move on.
+      doFadeOut();
+      return;
+  }
+
   const display_x = (event.x - origin_pixel_x) / units_to_pixels;
   const display_y = (event.y - origin_pixel_y) / units_to_pixels;
 
@@ -998,17 +1033,17 @@ canvas.addEventListener("mousedown", function(event: MouseEvent) {
   animateIntoRotation(tile_index);
 });
 
-let tile_rotation_animations: {[index:number]:{rotation:number,cancelled:boolean}} = {};
+let tile_rotation_animations: {[index:number]:{rotation:number,handle:number}} = {};
 function animateIntoRotation(tile_index: number) {
   const start_time = new Date().getTime();
   const total_time = level.tile_animation_time;
   let existing_animation = tile_rotation_animations[tile_index];
-  if (existing_animation) existing_animation.cancelled = true;
-  let animation = {rotation: -1, cancelled: false};
+  if (existing_animation) cancelAnimationFrame(existing_animation.handle);
+  let animation = {rotation: -1, handle: 0};
   tile_rotation_animations[tile_index] = animation;
-  requestAnimationFrame(animate);
+  animate();
+
   function animate() {
-    if (animation.cancelled) return;
     const time_progress = (new Date().getTime() - start_time) / total_time;
     if (time_progress >= 1) {
       delete tile_rotation_animations[tile_index];
@@ -1018,7 +1053,7 @@ function animateIntoRotation(tile_index: number) {
     animation.rotation = time_progress - 1;
 
     renderEverything();
-    requestAnimationFrame(animate);
+    animation.handle = requestAnimationFrame(animate);
   }
 }
 
@@ -1028,10 +1063,10 @@ let units_to_pixels = 100;
 let origin_pixel_x = -50;
 let origin_pixel_y = -50;
 function handleResize() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  buffer_canvas.width = canvas.width;
-  buffer_canvas.height = canvas.height;
+  for (let c of all_canvases) {
+    c.width = window.innerWidth;
+    c.height = window.innerHeight;
+  }
 
   const display_width = level.units_per_tile_x * level.display_tiles_x;
   const display_height = level.units_per_tile_y * level.display_tiles_y;
@@ -1054,31 +1089,60 @@ function handleResize() {
   renderEverything();
 }
 
+let render_enabled = true;
 function renderEverything() {
-  const use_buffer = game_state !== GameState.Playing;
-  const context = (use_buffer ? buffer_canvas : canvas).getContext("2d")!;
-  context.fillStyle = "#fff";
-  context.fillRect(0, 0, canvas.width, canvas.height);
+  if (!render_enabled) return;
 
-  context.save();
+  // clear all buffers
+  for (let c of all_canvases) {
+    let ctx = c.getContext("2d")!;
+    ctx.clearRect(0, 0, c.width, c.height);
+  }
+
+  // transform and render to each buffer
+  for (let c of render_target_canvases) {
+    let ctx = c.getContext("2d")!;
+    ctx.save();
+    ctx.translate(origin_pixel_x, origin_pixel_y);
+    ctx.scale(units_to_pixels, units_to_pixels);
+  }
   try {
-    context.translate(origin_pixel_x, origin_pixel_y);
-    context.scale(units_to_pixels, units_to_pixels);
-    level.renderLevel(context);
+
+    level.renderAsdfBackground(asdf_background_canvas.getContext("2d")!);
+    level.renderLevel(tile_canvas.getContext("2d")!);
+    level.renderAsdfForeground(asdf_foreground_canvas.getContext("2d")!);
 
   } finally {
-    context.restore();
+    for (let c of render_target_canvases) {
+      let ctx = c.getContext("2d")!;
+      ctx.restore();
+    }
+  }
+
+  // composite
+  let composite_context = buffer_canvas.getContext("2d")!;
+  composite_context.save();
+  try {
+    composite_context.globalAlpha = asdf_alpha;
+    composite_context.drawImage(asdf_background_canvas, 0, 0);
+
+    composite_context.globalAlpha = 1;
+    composite_context.drawImage(tile_canvas, 0, 0);
+
+    composite_context.globalAlpha = asdf_alpha;
+    composite_context.drawImage(asdf_foreground_canvas, 0, 0);
+  } finally {
+    composite_context.restore();
   }
 
   // render the game into the real canvas with the alpha blend
-  if (use_buffer) {
-    const real_context = canvas.getContext("2d")!;
-    real_context.fillStyle = "#fff";
-    real_context.fillRect(0, 0, canvas.width, canvas.height);
-    real_context.save();
-    real_context.globalAlpha = global_alpha;
-    real_context.drawImage(buffer_canvas, 0, 0);
-    real_context.restore();
+  const final_context = canvas.getContext("2d")!;
+  final_context.save();
+  try {
+    final_context.globalAlpha = global_alpha;
+    final_context.drawImage(buffer_canvas, 0, 0);
+  } finally {
+    final_context.restore();
   }
 }
 
@@ -1106,7 +1170,7 @@ function clickTile(tile_index: number): boolean {
             // malformed input
             level_number = 0;
           }
-          loadNewLevel();
+          loadNewLevel(0);
         }, 0);
         return false;
       }
@@ -1123,44 +1187,116 @@ function clickTile(tile_index: number): boolean {
 
 function checkForDone() {
   const unsolved_count = level.countUnsolved();
-  if (unsolved_count === 0) {
-    // everything is done
-    beginLevelTransition();
-  }
+  if (unsolved_count > 0) return;
+
+  // everything is done
+  doFadeToRoses();
 }
-let global_alpha = 1.0;
-function beginLevelTransition() {
-  game_state = GameState.FadeOut;
+
+let cancel_state_animation: null | (() => void) = null;
+function stopStateAnimation() {
+  if (cancel_state_animation) cancel_state_animation();
+  cancel_state_animation = null;
+}
+function setGameState(new_state: GameState) {
+  stopStateAnimation();
+  global_alpha = 1.0;
+  asdf_alpha = 1.0;
+  game_state = new_state;
+}
+
+function doFadeOut() {
+  setGameState(GameState.FadeOut);
   const start_time = new Date().getTime();
   animate();
 
   function animate() {
+    assert(game_state === GameState.FadeOut);
     const progress = (new Date().getTime() - start_time) / 1000;
     if (progress < 1) {
       global_alpha = 1 - progress;
-    } else if (progress < 2) {
-      if (game_state === GameState.FadeOut) {
-        level_number++;
-        loadNewLevel();
-        game_state = GameState.FadeIn;
-      }
-      global_alpha = progress - 1;
+      asdf_alpha = 0;
+      let handle = requestAnimationFrame(animate);
+      cancel_state_animation = function() {
+        cancelAnimationFrame(handle);
+      };
     } else {
       // done
-      game_state = GameState.Playing;
-      global_alpha = 1.0;
+      advanceToNextLevel();
+      doFadeIn();
     }
     renderEverything();
-    if (game_state !== GameState.Playing) {
-      requestAnimationFrame(animate);
-    }
   }
 }
-function loadNewLevel() {
-  loadLevel(getLevelForNumber(level_number));
-  save();
+
+function doFadeIn() {
+  setGameState(GameState.FadeIn);
+  const start_time = new Date().getTime();
+  animate();
+
+  function animate() {
+    assert(game_state === GameState.FadeIn);
+    const progress = (new Date().getTime() - start_time) / 1000;
+    if (progress < 1) {
+      global_alpha = progress;
+      let handle = requestAnimationFrame(animate);
+      cancel_state_animation = function() {
+        cancelAnimationFrame(handle);
+      };
+    } else {
+      // done
+      setGameState(GameState.Playing);
+    }
+    renderEverything();
+  }
 }
-function getLevelForNumber(level_number: number): Level {
+
+function doFadeToRoses() {
+  setGameState(GameState.FadeToRoses);
+  const start_time = new Date().getTime();
+  animate();
+
+  function animate() {
+    assert(game_state === GameState.FadeToRoses);
+    const progress = (new Date().getTime() - start_time) / 1000;
+    if (progress < 1) {
+      asdf_alpha = 1 - progress;
+      let handle = requestAnimationFrame(animate);
+      cancel_state_animation = function() {
+        cancelAnimationFrame(handle);
+      };
+    } else {
+      // done
+      setGameState(GameState.SmellTheRoses);
+      asdf_alpha = 0;
+    }
+    renderEverything();
+  }
+}
+
+function advanceToNextLevel() {
+  render_enabled = false;
+  try {
+    loadNewLevel(1);
+  } finally {
+    render_enabled = true;
+  }
+  doFadeIn();
+}
+
+let level: Level;
+function loadNewLevel(level_number_delta: number) {
+  level_number += level_number_delta;
+  level = getLevelForCurrentLevelNumber();
+  save();
+
+  // callers can set the state to something else after this.
+  setGameState(GameState.Playing);
+  handleResize();
+}
+function getLevelForCurrentLevelNumber(): Level {
+  if (level_number < 1) level_number = 1;
+
   switch (level_number) {
     case 1:
       return generateLevel({size:[4, 4], shape: Shape.Square, colors: ColorRules.Single}, oneColor([
@@ -1238,7 +1374,9 @@ function getLevelForNumber(level_number: number): Level {
       return generateLevel({size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.Single, toroidal: true, rough: true});
 
     default:
-      throw new AssertionFailure();
+      alert("invalid level number. resetting to level 1");
+      level_number = 1;
+      return getLevelForCurrentLevelNumber();
   }
 }
 
@@ -1344,19 +1482,19 @@ function euclideanMod(numerator: number, denominator: number): number {
 }
 
 retry_button.addEventListener("click", function() {
-  loadNewLevel();
+  loadNewLevel(0);
   hideSidebar();
 });
 reset_button.addEventListener("click", function() {
   if (confirm("Really start back at level 1?")) {
     level_number = 1;
-    loadNewLevel();
+    loadNewLevel(0);
     hideSidebar();
   }
 });
 
 function getSaveObject(): {[key:string]:any} {
-  let save_data_str = window.localStorage.getItem('loops');
+  let save_data_str = window.localStorage.getItem("loops");
   return save_data_str ? JSON.parse(save_data_str) : {};
 }
 function save() {
@@ -1369,7 +1507,7 @@ function save() {
 (function () {
   let save_data = getSaveObject();
   level_number = save_data.level_number || 1;
-  loadNewLevel();
+  loadNewLevel(0);
 })();
 
 (function() {
@@ -1378,5 +1516,5 @@ function save() {
     let save_data = JSON.parse(save_data_str);
     level_number = save_data.level_number;
   }
-  loadNewLevel();
+  loadNewLevel(0);
 })();
