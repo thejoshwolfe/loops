@@ -1013,8 +1013,9 @@ canvas.addEventListener("mousedown", function(event: MouseEvent) {
       // you can't do anything
       return;
     case GameState.SmellTheRoses:
-      smellARose();
-      return
+      // alright, time to move on.
+      doFadeOut();
+      return;
   }
 
   const display_x = (event.x - origin_pixel_x) / units_to_pixels;
@@ -1189,12 +1190,7 @@ function checkForDone() {
   if (unsolved_count > 0) return;
 
   // everything is done
-  // TODO:
-  if (false) {
-    doFadeOut();
-  } else {
-    doFadeToRoses();
-  }
+  doFadeToRoses();
 }
 
 let cancel_state_animation: null | (() => void) = null;
@@ -1206,7 +1202,6 @@ function setGameState(new_state: GameState) {
   stopStateAnimation();
   global_alpha = 1.0;
   asdf_alpha = 1.0;
-  roses_smelled = 0;
   game_state = new_state;
 }
 
@@ -1220,6 +1215,7 @@ function doFadeOut() {
     const progress = (new Date().getTime() - start_time) / 1000;
     if (progress < 1) {
       global_alpha = 1 - progress;
+      asdf_alpha = 0;
       let handle = requestAnimationFrame(animate);
       cancel_state_animation = function() {
         cancelAnimationFrame(handle);
@@ -1273,42 +1269,6 @@ function doFadeToRoses() {
       // done
       setGameState(GameState.SmellTheRoses);
       asdf_alpha = 0;
-    }
-    renderEverything();
-  }
-}
-
-// Smell the roses mode is when you get to look at the level
-// in a completed state before moving on.
-// You tap three times (smell three roses) to advance.
-let roses_smelled = 0;
-const total_roses = 3;
-function smellARose() {
-  assert(game_state === GameState.SmellTheRoses);
-  stopStateAnimation();
-  roses_smelled += 1;
-  if (roses_smelled < total_roses) {
-    global_alpha = 1 - roses_smelled / total_roses;
-    renderEverything();
-    let unsmell_handle = setTimeout(unsmellARose, 1500);
-    cancel_state_animation = function() {
-      clearTimeout(unsmell_handle);
-    };
-  } else {
-    roses_smelled = 0;
-    advanceToNextLevel();
-  }
-
-  function unsmellARose() {
-    cancel_state_animation = null;
-    if (game_state !== GameState.SmellTheRoses || roses_smelled <= 0) return;
-    roses_smelled -= 1;
-    global_alpha = 1 - roses_smelled / total_roses;
-    if (roses_smelled > 0) {
-      let unsmell_handle = setTimeout(unsmellARose, 500);
-      cancel_state_animation = function() {
-        clearTimeout(unsmell_handle);
-      };
     }
     renderEverything();
   }
