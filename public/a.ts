@@ -1,7 +1,6 @@
 let level_number = 1;
 
 const canvas = document.getElementById("canvas")! as HTMLCanvasElement;
-const buffer_canvas = document.createElement("canvas");
 const sidebar_tray = document.getElementById("sidebar")!;
 const sidebar_button = document.getElementById("hamburger")!;
 const retry_button = document.getElementById("retryButton")!;
@@ -10,9 +9,31 @@ const reset_button = document.getElementById("resetButton")!;
 const pi = Math.PI;
 const sqrt3 = Math.sqrt(3);
 
+let global_alpha = 1.0;
+const buffer_canvas = document.createElement("canvas");
+let asdf_alpha = 1.0;
+const asdf_background_canvas = document.createElement("canvas");
+const tile_canvas = document.createElement("canvas");
+const asdf_foreground_canvas = document.createElement("canvas");
+
+const all_canvases = [
+  canvas,
+  buffer_canvas,
+  asdf_background_canvas,
+  tile_canvas,
+  asdf_foreground_canvas,
+];
+
+const render_target_canvases = [
+  asdf_background_canvas,
+  tile_canvas,
+  asdf_foreground_canvas,
+];
+
 enum GameState {
   Playing,
   FadeOut, // auto transition
+  FadeToRoses,
   SmellTheRoses, // need to tap to advance
   FadeIn,
 }
@@ -791,41 +812,6 @@ class Level {
   }
 
   renderLevel(context: CanvasRenderingContext2D) {
-    // grid lines
-    if (game_state !== GameState.SmellTheRoses) {
-      context.strokeStyle = "#ddd";
-      context.lineWidth = 0.03;
-      context.lineCap = "round";
-      context.lineJoin = "round";
-      context.beginPath();
-      this.renderGridLines(context);
-      context.stroke();
-    }
-
-    // tile background
-    if (this.cement_mode || this.rough) {
-      for (let location of this.allTileIndexes()) {
-        if (level.frozen_tiles[location]) {
-          context.fillStyle = "#ccc";
-        } else {
-          let age = level.recent_touch_queue.indexOf(location);
-          if (age === -1) continue;
-          switch (age) {
-            case 0:
-              context.fillStyle = "#eee";
-              break;
-            case 1:
-            case 2:
-              context.fillStyle = "#eee";
-              break;
-            default: throw new AssertionFailure();
-          }
-        }
-        const {x, y} = this.getTileCoordFromIndex(location);
-        this.renderTileBackgrounds(context, x, y);
-      }
-    }
-
     // tiles
     for (let color_index = 0; color_index < this.color_count; color_index++) {
       // select an appropriate line style and color
@@ -880,7 +866,47 @@ class Level {
         this.renderTiles(context, color_value, x, y, animation_progress, endpoint_style);
       }
     }
+  }
 
+  renderAsdfBackground(context: CanvasRenderingContext2D): void {
+    // grid lines
+    if (game_state !== GameState.SmellTheRoses) {
+      context.strokeStyle = "#ddd";
+      context.lineWidth = 0.03;
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.beginPath();
+      this.renderGridLines(context);
+      context.stroke();
+    }
+
+    // tile background
+    if (this.cement_mode || this.rough) {
+      for (let location of this.allTileIndexes()) {
+        if (level.frozen_tiles[location]) {
+          context.fillStyle = "#ccc";
+        } else {
+          let age = level.recent_touch_queue.indexOf(location);
+          if (age === -1) continue;
+          switch (age) {
+            case 0:
+              context.fillStyle = "#eee";
+              break;
+            case 1:
+            case 2:
+              context.fillStyle = "#eee";
+              break;
+            default: throw new AssertionFailure();
+          }
+        }
+        const {x, y} = this.getTileCoordFromIndex(location);
+        this.renderTileBackgrounds(context, x, y);
+      }
+    }
+
+  }
+
+  renderAsdfForeground(context: CanvasRenderingContext2D): void {
     // toroidal guide
     if (this.toroidal) {
       let left = this.display_offset_x;
@@ -983,6 +1009,7 @@ canvas.addEventListener("mousedown", function(event: MouseEvent) {
       // continue
       break;
     case GameState.FadeOut:
+    case GameState.FadeToRoses:
       // you can't do anything
       return;
     case GameState.SmellTheRoses:
@@ -1005,17 +1032,17 @@ canvas.addEventListener("mousedown", function(event: MouseEvent) {
   animateIntoRotation(tile_index);
 });
 
-let tile_rotation_animations: {[index:number]:{rotation:number,cancelled:boolean}} = {};
+let tile_rotation_animations: {[index:number]:{rotation:number,handle:number}} = {};
 function animateIntoRotation(tile_index: number) {
   const start_time = new Date().getTime();
   const total_time = level.tile_animation_time;
   let existing_animation = tile_rotation_animations[tile_index];
-  if (existing_animation) existing_animation.cancelled = true;
-  let animation = {rotation: -1, cancelled: false};
+  if (existing_animation) cancelAnimationFrame(existing_animation.handle);
+  let animation = {rotation: -1, handle: 0};
   tile_rotation_animations[tile_index] = animation;
-  requestAnimationFrame(animate);
+  animate();
+
   function animate() {
-    if (animation.cancelled) return;
     const time_progress = (new Date().getTime() - start_time) / total_time;
     if (time_progress >= 1) {
       delete tile_rotation_animations[tile_index];
@@ -1025,7 +1052,7 @@ function animateIntoRotation(tile_index: number) {
     animation.rotation = time_progress - 1;
 
     renderEverything();
-    requestAnimationFrame(animate);
+    animation.handle = requestAnimationFrame(animate);
   }
 }
 
@@ -1035,10 +1062,10 @@ let units_to_pixels = 100;
 let origin_pixel_x = -50;
 let origin_pixel_y = -50;
 function handleResize() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  buffer_canvas.width = canvas.width;
-  buffer_canvas.height = canvas.height;
+  for (let c of all_canvases) {
+    c.width = window.innerWidth;
+    c.height = window.innerHeight;
+  }
 
   const display_width = level.units_per_tile_x * level.display_tiles_x;
   const display_height = level.units_per_tile_y * level.display_tiles_y;
@@ -1065,30 +1092,56 @@ let render_enabled = true;
 function renderEverything() {
   if (!render_enabled) return;
 
-  const use_buffer = global_alpha < 1.0;
-  const context = (use_buffer ? buffer_canvas : canvas).getContext("2d")!;
-  context.fillStyle = "#fff";
-  context.fillRect(0, 0, canvas.width, canvas.height);
+  // clear all buffers
+  for (let c of all_canvases) {
+    let ctx = c.getContext("2d")!;
+    ctx.clearRect(0, 0, c.width, c.height);
+  }
 
-  context.save();
+  // transform and render to each buffer
+  for (let c of render_target_canvases) {
+    let ctx = c.getContext("2d")!;
+    ctx.save();
+    ctx.translate(origin_pixel_x, origin_pixel_y);
+    ctx.scale(units_to_pixels, units_to_pixels);
+  }
   try {
-    context.translate(origin_pixel_x, origin_pixel_y);
-    context.scale(units_to_pixels, units_to_pixels);
-    level.renderLevel(context);
+
+    level.renderAsdfBackground(asdf_background_canvas.getContext("2d")!);
+    level.renderLevel(tile_canvas.getContext("2d")!);
+    level.renderAsdfForeground(asdf_foreground_canvas.getContext("2d")!);
 
   } finally {
-    context.restore();
+    for (let c of render_target_canvases) {
+      let ctx = c.getContext("2d")!;
+      ctx.restore();
+    }
+  }
+
+  // composite
+  let composite_context = buffer_canvas.getContext("2d")!;
+  composite_context.save();
+  try {
+    composite_context.globalAlpha = asdf_alpha;
+    composite_context.drawImage(asdf_background_canvas, 0, 0);
+
+    composite_context.globalAlpha = 1;
+    composite_context.drawImage(tile_canvas, 0, 0);
+
+    composite_context.globalAlpha = asdf_alpha;
+    composite_context.drawImage(asdf_foreground_canvas, 0, 0);
+  } finally {
+    composite_context.restore();
   }
 
   // render the game into the real canvas with the alpha blend
-  if (use_buffer) {
-    const real_context = canvas.getContext("2d")!;
-    real_context.fillStyle = "#fff";
-    real_context.fillRect(0, 0, canvas.width, canvas.height);
-    real_context.save();
-    real_context.globalAlpha = global_alpha;
-    real_context.drawImage(buffer_canvas, 0, 0);
-    real_context.restore();
+  const final_context = canvas.getContext("2d")!;
+  final_context.save();
+  try {
+    final_context.globalAlpha = global_alpha;
+    final_context.drawImage(buffer_canvas, 0, 0);
+  } finally {
+    final_context.restore();
   }
 }
 
@@ -1131,7 +1184,6 @@ function clickTile(tile_index: number): boolean {
   return true;
 }
 
-let global_alpha = 1.0;
 function checkForDone() {
   const unsolved_count = level.countUnsolved();
   if (unsolved_count > 0) return;
@@ -1141,8 +1193,7 @@ function checkForDone() {
   if (false) {
     doFadeOut();
   } else {
-    setGameState(GameState.SmellTheRoses);
-    // TODO: doFadeToRoses();
+    doFadeToRoses();
   }
 }
 
@@ -1154,6 +1205,7 @@ function stopStateAnimation() {
 function setGameState(new_state: GameState) {
   stopStateAnimation();
   global_alpha = 1.0;
+  asdf_alpha = 1.0;
   roses_smelled = 0;
   game_state = new_state;
 }
@@ -1198,6 +1250,29 @@ function doFadeIn() {
     } else {
       // done
       setGameState(GameState.Playing);
+    }
+    renderEverything();
+  }
+}
+
+function doFadeToRoses() {
+  setGameState(GameState.FadeToRoses);
+  const start_time = new Date().getTime();
+  animate();
+
+  function animate() {
+    assert(game_state === GameState.FadeToRoses);
+    const progress = (new Date().getTime() - start_time) / 1000;
+    if (progress < 1) {
+      asdf_alpha = 1 - progress;
+      let handle = requestAnimationFrame(animate);
+      cancel_state_animation = function() {
+        cancelAnimationFrame(handle);
+      };
+    } else {
+      // done
+      setGameState(GameState.SmellTheRoses);
+      asdf_alpha = 0;
     }
     renderEverything();
   }
