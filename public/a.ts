@@ -919,12 +919,6 @@ class Level {
   }
 }
 
-let level: Level;
-function loadLevel(new_level: Level) {
-  level = new_level;
-  handleResize();
-}
-
 window.addEventListener("resize", function() {
   handleResize();
 });
@@ -960,20 +954,17 @@ window.addEventListener("keydown", function(event: KeyboardEvent) {
     // cheatcodes to navigate levels
     case "BracketRight":
       if (event.shiftKey) {
-        level_number += 6;
+        loadNewLevel(6);
       } else {
-        level_number += 1;
+        loadNewLevel(1);
       }
-      loadNewLevel();
       break;
     case "BracketLeft":
       if (event.shiftKey) {
-        level_number -= 6;
+        loadNewLevel(-6);
       } else {
-        level_number -= 1;
+        loadNewLevel(-1);
       }
-      if (level_number <= 0) level_number = 1;
-      loadNewLevel();
       break;
   }
 });
@@ -1070,8 +1061,11 @@ function handleResize() {
   renderEverything();
 }
 
+let render_enabled = true;
 function renderEverything() {
-  const use_buffer = game_state !== GameState.Playing;
+  if (!render_enabled) return;
+
+  const use_buffer = global_alpha < 1.0;
   const context = (use_buffer ? buffer_canvas : canvas).getContext("2d")!;
   context.fillStyle = "#fff";
   context.fillRect(0, 0, canvas.width, canvas.height);
@@ -1122,7 +1116,7 @@ function clickTile(tile_index: number): boolean {
             // malformed input
             level_number = 0;
           }
-          loadNewLevel();
+          loadNewLevel(0);
         }, 0);
         return false;
       }
@@ -1145,24 +1139,39 @@ function checkForDone() {
   // everything is done
   // TODO:
   if (false) {
-    game_state = GameState.FadeOut;
     doFadeOut();
   } else {
-    game_state = GameState.SmellTheRoses;
+    setGameState(GameState.SmellTheRoses);
     // TODO: doFadeToRoses();
   }
 }
 
+let cancel_state_animation: null | (() => void) = null;
+function stopStateAnimation() {
+  if (cancel_state_animation) cancel_state_animation();
+  cancel_state_animation = null;
+}
+function setGameState(new_state: GameState) {
+  stopStateAnimation();
+  global_alpha = 1.0;
+  roses_smelled = 0;
+  game_state = new_state;
+}
+
 function doFadeOut() {
+  setGameState(GameState.FadeOut);
   const start_time = new Date().getTime();
   animate();
 
   function animate() {
-    if (game_state !== GameState.FadeOut) return;
+    assert(game_state === GameState.FadeOut);
     const progress = (new Date().getTime() - start_time) / 1000;
     if (progress < 1) {
       global_alpha = 1 - progress;
-      requestAnimationFrame(animate);
+      let handle = requestAnimationFrame(animate);
+      cancel_state_animation = function() {
+        cancelAnimationFrame(handle);
+      };
     } else {
       // done
       advanceToNextLevel();
@@ -1173,19 +1182,22 @@ function doFadeOut() {
 }
 
 function doFadeIn() {
+  setGameState(GameState.FadeIn);
   const start_time = new Date().getTime();
   animate();
 
   function animate() {
-    if (game_state !== GameState.FadeIn) return;
+    assert(game_state === GameState.FadeIn);
     const progress = (new Date().getTime() - start_time) / 1000;
     if (progress < 1) {
       global_alpha = progress;
-      requestAnimationFrame(animate);
+      let handle = requestAnimationFrame(animate);
+      cancel_state_animation = function() {
+        cancelAnimationFrame(handle);
+      };
     } else {
       // done
-      game_state = GameState.Playing;
-      global_alpha = 1.0;
+      setGameState(GameState.Playing);
     }
     renderEverything();
   }
@@ -1196,43 +1208,60 @@ function doFadeIn() {
 // You tap three times (smell three roses) to advance.
 let roses_smelled = 0;
 const total_roses = 3;
-let unsmell_handle = setTimeout(function(){}, 0); // example
 function smellARose() {
   assert(game_state === GameState.SmellTheRoses);
-  clearTimeout(unsmell_handle);
+  stopStateAnimation();
   roses_smelled += 1;
   if (roses_smelled < total_roses) {
     global_alpha = 1 - roses_smelled / total_roses;
     renderEverything();
-    unsmell_handle = setTimeout(unsmellARose, 1500);
+    let unsmell_handle = setTimeout(unsmellARose, 1500);
+    cancel_state_animation = function() {
+      clearTimeout(unsmell_handle);
+    };
   } else {
     roses_smelled = 0;
     advanceToNextLevel();
   }
 
   function unsmellARose() {
+    cancel_state_animation = null;
     if (game_state !== GameState.SmellTheRoses || roses_smelled <= 0) return;
     roses_smelled -= 1;
     global_alpha = 1 - roses_smelled / total_roses;
     if (roses_smelled > 0) {
-      unsmell_handle = setTimeout(unsmellARose, 500);
+      let unsmell_handle = setTimeout(unsmellARose, 500);
+      cancel_state_animation = function() {
+        clearTimeout(unsmell_handle);
+      };
     }
     renderEverything();
   }
 }
 
-
 function advanceToNextLevel() {
-  level_number++;
-  loadNewLevel();
-  game_state = GameState.FadeIn;
+  render_enabled = false;
+  try {
+    loadNewLevel(1);
+  } finally {
+    render_enabled = true;
+  }
   doFadeIn();
 }
-function loadNewLevel() {
-  loadLevel(getLevelForNumber(level_number));
+
+let level: Level;
+function loadNewLevel(level_number_delta: number) {
+  level_number += level_number_delta;
+  level = getLevelForCurrentLevelNumber();
   save();
+
+  // callers can set the state to something else after this.
+  setGameState(GameState.Playing);
+  handleResize();
 }
-function getLevelForNumber(level_number: number): Level {
+function getLevelForCurrentLevelNumber(): Level {
+  if (level_number < 1) level_number = 1;
+
   switch (level_number) {
     case 1:
       return generateLevel({size:[4, 4], shape: Shape.Square, colors: ColorRules.Single}, oneColor([
@@ -1310,7 +1339,9 @@ function getLevelForNumber(level_number: number): Level {
       return generateLevel({size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.Single, toroidal: true, rough: true});
 
     default:
-      throw new AssertionFailure();
+      alert("invalid level number. resetting to level 1");
+      level_number = 1;
+      return getLevelForCurrentLevelNumber();
   }
 }
 
@@ -1416,13 +1447,13 @@ function euclideanMod(numerator: number, denominator: number): number {
 }
 
 retry_button.addEventListener("click", function() {
-  loadNewLevel();
+  loadNewLevel(0);
   hideSidebar();
 });
 reset_button.addEventListener("click", function() {
   if (confirm("Really start back at level 1?")) {
     level_number = 1;
-    loadNewLevel();
+    loadNewLevel(0);
     hideSidebar();
   }
 });
@@ -1441,7 +1472,7 @@ function save() {
 (function () {
   let save_data = getSaveObject();
   level_number = save_data.level_number || 1;
-  loadNewLevel();
+  loadNewLevel(0);
 })();
 
 (function() {
@@ -1450,5 +1481,5 @@ function save() {
     let save_data = JSON.parse(save_data_str);
     level_number = save_data.level_number;
   }
-  loadNewLevel();
+  loadNewLevel(0);
 })();
