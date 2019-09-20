@@ -13,6 +13,10 @@ https://wolfesoftware.com/loops/
 
 ## Version History
 
+#### 1.1.0:
+ * The end game now stays on cement-mode, single-color (2 state), hexagonal, toroidal, rough island,
+   instead of looping through a tour of all the settings.
+
 #### 1.0.2:
  * Fix background of main game when the browser is in dark mode.
    The game always has a light-mode theme for now.

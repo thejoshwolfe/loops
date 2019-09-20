@@ -1348,40 +1348,36 @@ function getLevelForCurrentLevelNumber(): Level {
       return generateLevel({size:[9, 9], shape: Shape.Square, colors: ColorRules.TwoOverlap});
     case 15:
       return generateLevel({size:[8, 8], shape: Shape.Hexagon, colors: ColorRules.TwoOverlap, rough: true});
-  }
-  // loop
-  switch ((level_number - 16) % 12) {
-    case 0:
+
+    case 16:
       return generateLevel({size:[10, 10], shape: Shape.Square, colors: ColorRules.TwoOverlap, cement_mode: true, rough: true});
-    case 1:
+    case 17:
       return generateLevel({size:[9, 9], shape: Shape.Hexagon, colors: ColorRules.TwoOverlap, cement_mode: true, rough: true});
-    case 2:
+    case 18:
       return generateLevel({size:[10, 10], shape: Shape.Square, colors: ColorRules.TwoSeparate, cement_mode: true, rough: true});
-    case 3:
+    case 19:
       return generateLevel({size:[9, 9], shape: Shape.Hexagon, colors: ColorRules.TwoSeparate, cement_mode: true, rough: true});
-    case 4:
+    case 20:
       return generateLevel({size:[10, 10], shape: Shape.Square, colors: ColorRules.Single, cement_mode: true, rough: true});
-    case 5:
+    case 21:
       return generateLevel({size:[9, 9], shape: Shape.Hexagon, colors: ColorRules.Single, cement_mode: true, rough: true});
 
-    case 6:
+    case 22:
       return generateLevel({size:[6, 6], shape: Shape.Square, colors: ColorRules.TwoOverlap, toroidal: true, rough: true});
-    case 7:
+    case 23:
       return generateLevel({size:[6, 6], shape: Shape.Square, colors: ColorRules.TwoSeparate, toroidal: true, rough: true});
-    case 8:
+    case 24:
       return generateLevel({size:[6, 6], shape: Shape.Square, colors: ColorRules.Single, toroidal: true, rough: true});
-    case 9:
+    case 25:
       return generateLevel({size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.TwoOverlap, toroidal: true, rough: true});
-    case 10:
+    case 26:
       return generateLevel({size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.TwoSeparate, toroidal: true, rough: true});
-    case 11:
+    case 27:
       return generateLevel({size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.Single, toroidal: true, rough: true});
-
-    default:
-      alert("invalid level number. resetting to level 1");
-      level_number = 1;
-      return getLevelForCurrentLevelNumber();
   }
+
+  // the final challenge
+  return generateLevel({size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.Single, cement_mode: true, toroidal: true, rough: true});
 }
 
 function oneColor(values: number[]): Tile[] {
