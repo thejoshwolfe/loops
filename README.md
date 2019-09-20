@@ -13,6 +13,10 @@ https://wolfesoftware.com/loops/
 
 ## Version History
 
+#### 1.0.1:
+ * Fix background of main game when the browser is in dark mode.
+   The game always has a light-mode theme for now.
+
 #### 1.0.0:
  * Use version numbers
 

@@ -1139,6 +1139,10 @@ function renderEverything() {
   const final_context = canvas.getContext("2d")!;
   final_context.save();
   try {
+    // gotta fill the background with white using the context
+    // instead of css because dark mode makes everything goofy.
+    final_context.fillStyle = "#fff";
+    final_context.fillRect(0, 0, canvas.width, canvas.height);
     final_context.globalAlpha = global_alpha;
     final_context.drawImage(buffer_canvas, 0, 0);
   } finally {
