@@ -1509,12 +1509,3 @@ function save() {
   level_number = save_data.level_number || 1;
   loadNewLevel(0);
 })();
-
-(function() {
-  let save_data_str = window.localStorage.getItem("loops");
-  if (save_data_str) {
-    let save_data = JSON.parse(save_data_str);
-    level_number = save_data.level_number;
-  }
-  loadNewLevel(0);
-})();
