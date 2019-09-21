@@ -82,7 +82,6 @@ enum EndpointStyle {
 
 type Coord = {x:number, y:number};
 type Vector = {tile_index:number, direction:number};
-type Tile = {colors:number[]};
 
 interface LevelParameters {
   size: number[],
@@ -104,7 +103,7 @@ class Level {
   allow_overlap: boolean;
   toroidal: boolean;
   rough: boolean;
-  tiles: Tile[];
+  tiles: number[][];
 
   units_per_tile_x: number;
   units_per_tile_y: number;
@@ -149,7 +148,7 @@ class Level {
       for (let color_index = 0; color_index < this.color_count; color_index++) {
         colors.push(0);
       }
-      this.tiles.push({colors});
+      this.tiles.push(colors);
     }
 
     // calculate a bunch of derived constants
@@ -347,9 +346,9 @@ class Level {
 
   rotateTile(tile_index: number, times: number): void {
     for (let color_index = 0; color_index < this.color_count; color_index++) {
-      let color_value = this.tiles[tile_index].colors[color_index];
+      let color_value = this.tiles[tile_index][color_index];
       color_value = this.rotateValue(color_value, times);
-      this.tiles[tile_index].colors[color_index] = color_value;
+      this.tiles[tile_index][color_index] = color_value;
     }
   }
 
@@ -808,7 +807,7 @@ class Level {
     return result;
   }
   getEdgeValue(tile_index: number, color_index: number, direction: number): number {
-    return +!!(this.tiles[tile_index].colors[color_index] & direction);
+    return +!!(this.tiles[tile_index][color_index] & direction);
   }
 
   renderLevel(context: CanvasRenderingContext2D) {
@@ -860,7 +859,7 @@ class Level {
 
       for (let location of this.allTileIndexes()) {
         const {x, y} = this.getTileCoordFromIndex(location);
-        const color_value = this.tiles[location].colors[color_index];
+        const color_value = this.tiles[location][color_index];
         let tile_rotation_animation = tile_rotation_animations[location];
         let animation_progress = tile_rotation_animation ? tile_rotation_animation.rotation : 0;
         this.renderTiles(context, color_value, x, y, animation_progress, endpoint_style);
@@ -1380,15 +1379,15 @@ function getLevelForCurrentLevelNumber(): Level {
   return generateLevel({size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.Single, cement_mode: true, toroidal: true, rough: true});
 }
 
-function oneColor(values: number[]): Tile[] {
+function oneColor(values: number[]): number[][] {
   let result = [];
   for (let value of values) {
-    result.push({colors:[value]});
+    result.push([value]);
   }
   return result;
 }
 
-function generateLevel(parameters: LevelParameters, tiles?: Tile[]): Level {
+function generateLevel(parameters: LevelParameters, tiles?: number[][]): Level {
   let level = new Level(parameters);
   // mark out of bounds tiles as already frozen
   for (let tile_index of level.allTileIndexes()) {
@@ -1433,7 +1432,7 @@ function generateLevel(parameters: LevelParameters, tiles?: Tile[]): Level {
     // tiles already ready to use
     assert(level.tiles_per_row * level.tiles_per_column === tiles.length);
     for (let tile of tiles) {
-      assert(tile.colors.length === level.color_count);
+      assert(tile.length === level.color_count);
     }
     level.tiles = tiles;
 
@@ -1455,8 +1454,8 @@ function generateLevel(parameters: LevelParameters, tiles?: Tile[]): Level {
       let edge_value = Math.floor(Math.random() * possible_edge_values);
       for (let color_index = 0; color_index < level.color_count; color_index++) {
         if (edge_value & (1 << color_index)) {
-          level.tiles[vector.tile_index].colors[color_index] |= vector.direction;
-          level.tiles[other_tile].colors[color_index] |= level.reverseDirection(vector.direction);
+          level.tiles[vector.tile_index][color_index] |= vector.direction;
+          level.tiles[other_tile][color_index] |= level.reverseDirection(vector.direction);
         }
       }
     }
