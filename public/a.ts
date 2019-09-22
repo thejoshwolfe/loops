@@ -1189,6 +1189,8 @@ function clickTile(tile_index: number): boolean {
 
   checkForDone();
 
+  save();
+
   return true;
 }
 
@@ -1504,6 +1506,23 @@ function save() {
   // preserve any unknown properties
   let save_data = getSaveObject();
   save_data.level_number = level_number;
+  save_data.level = {
+    // level parameters
+    size: [level.tiles_per_row, level.tiles_per_column],
+    shape: level.shape,
+    colors: (
+      level.color_count === 1 ? ColorRules.Single :
+      level.allow_overlap ? ColorRules.TwoOverlap :
+      ColorRules.TwoSeparate
+    ),
+    cement_mode: level.cement_mode,
+    toroidal: level.toroidal,
+    rough: level.rough,
+    // game state
+    tiles: level.tiles,
+    frozen_tiles: level.frozen_tiles,
+    recent_touch_queue: level.recent_touch_queue,
+  };
   window.localStorage.setItem("loops", JSON.stringify(save_data));
 }
 
@@ -1511,7 +1530,6 @@ function save() {
 (function () {
   let save_data = getSaveObject();
   level_number = save_data.level_number || 1;
-  loadNewLevel(0);
 
   function loadLevelData(): Level | null {
     // the validation in this function is limited to preserving the invariants in our code.
@@ -1561,7 +1579,7 @@ function save() {
     let color_mask = (function(): number {
       switch (shape) {
         case Shape.Square: return (1 << 4) - 1;
-        case Shape.Square: return (1 << 6) - 1;
+        case Shape.Hexagon: return (1 << 6) - 1;
         default: throw new AssertionFailure();
       }
     })();
@@ -1595,5 +1613,13 @@ function save() {
   }
 
   let loaded_level = loadLevelData();
-  if (loaded_level == null) { debugger; loadLevelData(); }
+  if (loaded_level != null) {
+    level = loaded_level;
+    setGameState(GameState.Playing);
+    handleResize();
+    checkForDone();
+  } else {
+    debugger; loadLevelData();
+    loadNewLevel(0);
+  }
 })();
