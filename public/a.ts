@@ -93,18 +93,17 @@ interface LevelParameters {
 };
 
 class Level {
+  // LevelParameters
   tiles_per_row: number;
   tiles_per_column: number;
   shape: Shape;
-  frozen_tiles: {[tile_index:number]: boolean};
-  recent_touch_queue: number[];
   cement_mode: boolean;
   color_count: number;
   allow_overlap: boolean;
   toroidal: boolean;
   rough: boolean;
-  tiles: number[][];
 
+  // cached calculations
   units_per_tile_x: number;
   units_per_tile_y: number;
   tile_animation_time: number;
@@ -115,13 +114,16 @@ class Level {
   display_tiles_x: number;
   display_tiles_y: number;
 
+  // game state that needs to be saved
+  tiles: number[][];
+  frozen_tiles: {[tile_index:number]: boolean};
+  recent_touch_queue: number[];
+
   constructor(parameters: LevelParameters) {
     this.tiles_per_row = parameters.size[0];
     this.tiles_per_column = parameters.size[1];
     this.shape = parameters.shape;
     this.cement_mode = parameters.cement_mode || false;
-    this.recent_touch_queue = [];
-    this.frozen_tiles = {};
     this.toroidal = parameters.toroidal || false;
     this.rough = parameters.rough || false;
 
@@ -143,6 +145,8 @@ class Level {
 
     // all tiles start empty
     this.tiles = [];
+    this.frozen_tiles = {};
+    this.recent_touch_queue = [];
     for (let i = 0; i < this.tiles_per_row * this.tiles_per_column; i++) {
       let colors = [];
       for (let color_index = 0; color_index < this.color_count; color_index++) {
@@ -1503,8 +1507,93 @@ function save() {
   window.localStorage.setItem("loops", JSON.stringify(save_data));
 }
 
+// restore state from localStorage
 (function () {
   let save_data = getSaveObject();
   level_number = save_data.level_number || 1;
   loadNewLevel(0);
+
+  function loadLevelData(): Level | null {
+    // the validation in this function is limited to preserving the invariants in our code.
+    // this does not check to see if the level is beatable.
+    if (typeof save_data.level !== 'object') return null;
+
+    // LevelParameters
+    let size = save_data.level.size;
+    if (!Array.isArray(size)) return null;
+    if (size.length !== 2) return null;
+    for (let x of size) {
+      if (!Number.isInteger(x)) return null;
+      if (!(2 <= x && x <= 20)) return null;
+    }
+
+    let shape = save_data.level.shape as Shape;
+    if (typeof Shape[shape] !== 'string') return null;
+
+    let colors = save_data.level.colors as ColorRules;
+    if (typeof ColorRules[colors] !== 'string') return null;
+
+    let cement_mode = save_data.level.cement_mode;
+    if (typeof cement_mode !== 'boolean') return null;
+
+    let toroidal = save_data.level.toroidal;
+    if (typeof toroidal !== 'boolean') return null;
+
+    let rough = save_data.level.rough;
+    if (typeof rough !== 'boolean') return null;
+
+    let level_parameters: LevelParameters = {
+      size, shape, colors, cement_mode, toroidal, rough,
+    };
+
+    // game state
+    let tiles = save_data.level.tiles;
+    if (!Array.isArray(tiles)) return null;
+    if (tiles.length !== size[0] * size[1]) return null;
+    let color_count = (function(): number {
+      switch (colors) {
+        case ColorRules.Single: return 1;
+        case ColorRules.TwoSeparate: return 2;
+        case ColorRules.TwoOverlap: return 2;
+        default: throw new AssertionFailure();
+      }
+    })();
+    let color_mask = (function(): number {
+      switch (shape) {
+        case Shape.Square: return (1 << 4) - 1;
+        case Shape.Square: return (1 << 6) - 1;
+        default: throw new AssertionFailure();
+      }
+    })();
+    for (let x of tiles) {
+      if (!Array.isArray(x)) return null;
+      if (x.length !== color_count) return null;
+      for (let i = 0; i < x.length; i++) {
+        let c = x[i];
+        if (!Number.isInteger(c)) return null;
+        // rather than checking the value, just clamp it into validity.
+        x[i] = c & color_mask;
+      }
+    }
+
+    let frozen_tiles = save_data.level.frozen_tiles;
+    if (typeof frozen_tiles !== 'object') return null;
+    // don't need to type check anything else about frozen_tiles
+
+    let recent_touch_queue = save_data.level.recent_touch_queue;
+    if (!Array.isArray(recent_touch_queue)) return null;
+    if (recent_touch_queue.length > 3) return null;
+    // don't need to be careful about what's in the queue.
+
+    // json reading complete. everything looks good.
+    let loaded_level = new Level(level_parameters);
+    loaded_level.tiles = tiles;
+    loaded_level.frozen_tiles = frozen_tiles;
+    loaded_level.recent_touch_queue = recent_touch_queue;
+
+    return loaded_level;
+  }
+
+  let loaded_level = loadLevelData();
+  if (loaded_level == null) { debugger; loadLevelData(); }
 })();
