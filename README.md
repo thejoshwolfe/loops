@@ -13,6 +13,10 @@ https://wolfesoftware.com/loops/
 
 ## Version History
 
+#### 1.2.0:
+ * The game state now saves and loads on page refresh,
+   not just the level number (using `localStorage`).
+
 #### 1.1.0:
  * The end game now stays on cement-mode, single-color (2 state), hexagonal, toroidal, rough island,
    instead of looping through a tour of all the settings.
