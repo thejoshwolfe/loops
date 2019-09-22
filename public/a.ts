@@ -1619,7 +1619,7 @@ function save() {
     handleResize();
     checkForDone();
   } else {
-    debugger; loadLevelData();
+    //debugger; loadLevelData();
     loadNewLevel(0);
   }
 })();
