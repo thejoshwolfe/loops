@@ -800,19 +800,39 @@ class Level {
   }
 
   touchTile(tile_index: number): void {
-    if (!this.cement_mode) return;
-    let index = this.recent_touch_queue.indexOf(tile_index);
-    if (index !== -1) {
-      // bring it to the front
-      this.recent_touch_queue.splice(index, 1);
-      this.recent_touch_queue.unshift(tile_index);
-    } else {
-      // newly clicked
-      this.recent_touch_queue.unshift(tile_index);
-      if (this.recent_touch_queue.length > 3) {
-        // something's getting frozen
-        let freezing_tile = this.recent_touch_queue.pop()!;
-        this.frozen_tiles[freezing_tile] = true;
+    if (this.cement_mode) {
+      let index = this.recent_touch_queue.indexOf(tile_index);
+      if (index !== -1) {
+        // bring it to the front
+        this.recent_touch_queue.splice(index, 1);
+        this.recent_touch_queue.unshift(tile_index);
+      } else {
+        // newly clicked
+        this.recent_touch_queue.unshift(tile_index);
+        if (this.recent_touch_queue.length > 3) {
+          // something's getting frozen
+          let freezing_tile = this.recent_touch_queue.pop()!;
+          this.frozen_tiles[freezing_tile] = true;
+        }
+      }
+    }
+    if (this.inverter_tiles[tile_index]) {
+      delete this.inverter_tiles[tile_index];
+      this.invert();
+    }
+  }
+
+  invert(): void {
+    for (let {tile_index, direction} of this.allEdges()) {
+      let other_tile_index = this.getTileIndexFromVector(tile_index, direction);
+      if (this.frozen_tiles[tile_index] && this.frozen_tiles[other_tile_index]) continue;
+      // invert both
+      let other_direction = this.reverseDirection(direction);
+      let tile = this.tiles[tile_index];
+      let other_tile = this.tiles[other_tile_index];
+      for (let i = 0; i < tile.length; i++) {
+        tile[i] ^= direction;
+        other_tile[i] ^= other_direction;
       }
     }
   }
@@ -1404,7 +1424,7 @@ function getLevelForCurrentLevelNumber(): Level {
 
   // the final challenge
   return generateLevel({size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.Single,
-    cement_mode: true, toroidal: true, rough: true, inverters: 2});
+    cement_mode: true, toroidal: true, rough: true, inverters: 4});
 }
 
 function oneColor(values: number[]): number[][] {
