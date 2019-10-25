@@ -90,6 +90,7 @@ interface LevelParameters {
   cement_mode?: boolean,
   toroidal?: boolean,
   rough?: boolean,
+  inverters?: number,
 };
 
 class Level {
@@ -102,6 +103,7 @@ class Level {
   allow_overlap: boolean;
   toroidal: boolean;
   rough: boolean;
+  inverters: number;
 
   // cached calculations
   units_per_tile_x: number;
@@ -118,6 +120,7 @@ class Level {
   tiles: number[][];
   frozen_tiles: {[tile_index:number]: boolean};
   recent_touch_queue: number[];
+  inverter_tiles: {[tile_index:number]: boolean};
 
   constructor(parameters: LevelParameters) {
     this.tiles_per_row = parameters.size[0];
@@ -126,6 +129,7 @@ class Level {
     this.cement_mode = parameters.cement_mode || false;
     this.toroidal = parameters.toroidal || false;
     this.rough = parameters.rough || false;
+    this.inverters = parameters.inverters || 0;
 
     switch (parameters.colors) {
       case ColorRules.Single:
@@ -147,6 +151,7 @@ class Level {
     this.tiles = [];
     this.frozen_tiles = {};
     this.recent_touch_queue = [];
+    this.inverter_tiles = {};
     for (let i = 0; i < this.tiles_per_row * this.tiles_per_column; i++) {
       let colors = [];
       for (let color_index = 0; color_index < this.color_count; color_index++) {
@@ -425,7 +430,7 @@ class Level {
     }
   }
 
-  renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number, animation_progress: number, endpoint_style: EndpointStyle): void {
+  renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number, animation_progress: number, endpoint_style: EndpointStyle, render_inverter: boolean): void {
     switch (this.shape) {
       case Shape.Square: {
         if (color_value === 0) return;
@@ -518,6 +523,13 @@ class Level {
               break;
             default:
               throw new AssertionFailure();
+          }
+
+          if (render_inverter) {
+            context.fillStyle = "#c58947";
+            context.beginPath();
+            context.arc(0, 0, 0.15, 0, 2*pi);
+            context.fill();
           }
         } finally {
           context.restore();
@@ -729,6 +741,13 @@ class Level {
 
             default: throw new AssertionFailure();
           }
+
+          if (render_inverter) {
+            context.fillStyle = "#c58947";
+            context.beginPath();
+            context.arc(0, 0, 0.15, 0, 2*pi);
+            context.fill();
+          }
         } finally {
           context.restore();
         }
@@ -817,6 +836,7 @@ class Level {
   renderLevel(context: CanvasRenderingContext2D) {
     // tiles
     for (let color_index = 0; color_index < this.color_count; color_index++) {
+      let is_final_color = color_index === this.color_count - 1;
       // select an appropriate line style and color
       context.lineCap = "round";
       context.lineJoin = "round";
@@ -866,7 +886,8 @@ class Level {
         const color_value = this.tiles[location][color_index];
         let tile_rotation_animation = tile_rotation_animations[location];
         let animation_progress = tile_rotation_animation ? tile_rotation_animation.rotation : 0;
-        this.renderTiles(context, color_value, x, y, animation_progress, endpoint_style);
+        let render_inverter = is_final_color && this.inverter_tiles[location];
+        this.renderTiles(context, color_value, x, y, animation_progress, endpoint_style, render_inverter);
       }
     }
   }
@@ -930,11 +951,11 @@ class Level {
     }
   }
 
-  renderTiles(context: CanvasRenderingContext2D, color_value: number, x: number, y: number, animation_progress: number, endpoint_style: EndpointStyle): void {
-    if (!this.toroidal) return this.renderTile(context, color_value, x, y, animation_progress, endpoint_style);
+  renderTiles(context: CanvasRenderingContext2D, color_value: number, x: number, y: number, animation_progress: number, endpoint_style: EndpointStyle, render_inverter: boolean): void {
+    if (!this.toroidal) return this.renderTile(context, color_value, x, y, animation_progress, endpoint_style, render_inverter);
     for (let dy of [-1, 0, 1]) {
       for (let dx of [-1, 0, 1]) {
-        this.renderTile(context, color_value, x + dx * this.tiles_per_row, y + dy * this.tiles_per_column, animation_progress, endpoint_style);
+        this.renderTile(context, color_value, x + dx * this.tiles_per_row, y + dy * this.tiles_per_column, animation_progress, endpoint_style, render_inverter);
       }
     }
   }
@@ -1382,7 +1403,8 @@ function getLevelForCurrentLevelNumber(): Level {
   }
 
   // the final challenge
-  return generateLevel({size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.Single, cement_mode: true, toroidal: true, rough: true});
+  return generateLevel({size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.Single,
+    cement_mode: true, toroidal: true, rough: true, inverters: 2});
 }
 
 function oneColor(values: number[]): number[][] {
@@ -1474,7 +1496,31 @@ function generateLevel(parameters: LevelParameters, tiles?: number[][]): Level {
     }
   }
 
+  // choose the inverters
+  if (level.inverters > 0) {
+    // candidates are any tile that isn't frozen
+    let candidates = level.allTileIndexes();
+    for (let k in level.frozen_tiles) {
+      let tile_index = Number(k);
+      let candidate_index = candidates.indexOf(tile_index);
+      if (candidate_index !== -1) swapRemove(candidates, candidate_index);
+    }
+    if (candidates.length < level.inverters) throw new AssertionFailure();
+
+    for (let i = 0; i < level.inverters; i++) {
+      let candidate_index = Math.floor(Math.random() * candidates.length);
+      let tile_index = candidates[candidate_index];
+      swapRemove(candidates, candidate_index);
+      level.inverter_tiles[tile_index] = true;
+    }
+  }
+
   return level;
+}
+
+function swapRemove(arr: number[], index: number): void {
+  arr[index] = arr[arr.length - 1];
+  arr.pop();
 }
 
 class AssertionFailure {}
@@ -1518,10 +1564,12 @@ function save() {
     cement_mode: level.cement_mode,
     toroidal: level.toroidal,
     rough: level.rough,
+    inverters: level.inverters,
     // game state
     tiles: level.tiles,
     frozen_tiles: level.frozen_tiles,
     recent_touch_queue: level.recent_touch_queue,
+    inverter_tiles: level.inverter_tiles,
   };
   window.localStorage.setItem("loops", JSON.stringify(save_data));
 }
@@ -1560,8 +1608,11 @@ function save() {
     let rough = save_data.level.rough;
     if (typeof rough !== 'boolean') return null;
 
+    let inverters = save_data.level.inverters;
+    if (typeof inverters !== 'number') inverters = 0;
+
     let level_parameters: LevelParameters = {
-      size, shape, colors, cement_mode, toroidal, rough,
+      size, shape, colors, cement_mode, toroidal, rough, inverters,
     };
 
     // game state
@@ -1603,11 +1654,16 @@ function save() {
     if (recent_touch_queue.length > 3) return null;
     // don't need to be careful about what's in the queue.
 
+    let inverter_tiles = save_data.level.inverter_tiles;
+    if (typeof inverter_tiles !== 'object') return null;
+    // don't need to type check anything else about inverter_tiles
+
     // json reading complete. everything looks good.
     let loaded_level = new Level(level_parameters);
     loaded_level.tiles = tiles;
     loaded_level.frozen_tiles = frozen_tiles;
     loaded_level.recent_touch_queue = recent_touch_queue;
+    loaded_level.inverter_tiles = inverter_tiles;
 
     return loaded_level;
   }
