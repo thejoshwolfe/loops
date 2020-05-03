@@ -12,6 +12,8 @@ const sqrt3 = Math.sqrt(3);
 let global_alpha = 1.0;
 const buffer_canvas = document.createElement("canvas");
 let asdf_alpha = 1.0;
+let line_width_multiplier = 1.0;
+const line_width_multiplier_factor = 0.4;
 const asdf_background_canvas = document.createElement("canvas");
 const tile_canvas = document.createElement("canvas");
 const asdf_foreground_canvas = document.createElement("canvas");
@@ -90,6 +92,7 @@ interface LevelParameters {
   cement_mode?: boolean,
   toroidal?: boolean,
   rough?: boolean,
+  perfectable?: boolean,
 };
 
 class Level {
@@ -118,6 +121,8 @@ class Level {
   tiles: number[][];
   frozen_tiles: {[tile_index:number]: boolean};
   recent_touch_queue: number[];
+  original_tiles?: number[][];
+  perfect_so_far: boolean;
 
   constructor(parameters: LevelParameters) {
     this.tiles_per_row = parameters.size[0];
@@ -126,6 +131,7 @@ class Level {
     this.cement_mode = parameters.cement_mode || false;
     this.toroidal = parameters.toroidal || false;
     this.rough = parameters.rough || false;
+    this.perfect_so_far = false;
 
     switch (parameters.colors) {
       case ColorRules.Single:
@@ -201,6 +207,11 @@ class Level {
 
     // TODO: odd width wrapping for hexagons is not trivial, and doesn't work yet.
     assert(!(this.shape == Shape.Hexagon && (this.tiles_per_row & 1) && this.toroidal));
+  }
+
+  initializePossibilityForPerfect(): void {
+    this.original_tiles = JSON.parse(JSON.stringify(this.tiles));
+    this.perfect_so_far = true;
   }
 
   getTileIndexFromDisplayPoint(display_x: number, display_y: number): number {
@@ -349,10 +360,22 @@ class Level {
   }
 
   rotateTile(tile_index: number, times: number): void {
+    let all_back_to_original_values = true;
     for (let color_index = 0; color_index < this.color_count; color_index++) {
       let color_value = this.tiles[tile_index][color_index];
       color_value = this.rotateValue(color_value, times);
       this.tiles[tile_index][color_index] = color_value;
+
+      if (this.perfect_so_far && this.original_tiles != null) {
+        if (this.original_tiles[tile_index][color_index] !== color_value) {
+          all_back_to_original_values = false;
+        }
+      }
+    }
+
+    if (all_back_to_original_values) {
+      // you rotated a tile all the way around.
+      this.perfect_so_far = false;
     }
   }
 
@@ -823,19 +846,19 @@ class Level {
       let endpoint_style: EndpointStyle;
       if (this.color_count === 1) {
         context.strokeStyle = "#000";
-        context.lineWidth = level.units_per_tile_x * 0.1;
+        context.lineWidth = line_width_multiplier * level.units_per_tile_x * 0.1;
         endpoint_style = EndpointStyle.LargeRing;
       } else if (this.color_count === 2 && !this.allow_overlap) {
         switch (color_index) {
           case 0:
             context.strokeStyle = "#99f";
-            context.lineWidth = level.units_per_tile_x * 0.2;
+            context.lineWidth = line_width_multiplier * level.units_per_tile_x * 0.2;
             endpoint_style = EndpointStyle.LargeDot;
             context.fillStyle = context.strokeStyle;
             break;
           case 1:
             context.strokeStyle = "#c06";
-            context.lineWidth = level.units_per_tile_x * 0.075;
+            context.lineWidth = line_width_multiplier * level.units_per_tile_x * 0.075;
             endpoint_style = EndpointStyle.SmallRing;
             break;
           default: throw new AssertionFailure();
@@ -844,7 +867,7 @@ class Level {
         switch (color_index) {
           case 0:
             context.strokeStyle = "#e784e1";
-            context.lineWidth = level.units_per_tile_x * 0.4;
+            context.lineWidth = line_width_multiplier * level.units_per_tile_x * 0.4;
             context.lineCap = "butt";
             context.lineJoin = "miter";
             endpoint_style = EndpointStyle.LargeDot;
@@ -852,7 +875,7 @@ class Level {
             break;
           case 1:
             context.strokeStyle = "#000caa";
-            context.lineWidth = level.units_per_tile_x * 0.075;
+            context.lineWidth = line_width_multiplier * level.units_per_tile_x * 0.075;
             endpoint_style = EndpointStyle.LargeRing;
             break;
           default: throw new AssertionFailure();
@@ -1240,6 +1263,7 @@ function doFadeOut() {
 
 function doFadeIn() {
   setGameState(GameState.FadeIn);
+  line_width_multiplier = 1.0;
   const start_time = new Date().getTime();
   animate();
 
@@ -1270,6 +1294,7 @@ function doFadeToRoses() {
     const progress = (new Date().getTime() - start_time) / 1000;
     if (progress < 1) {
       asdf_alpha = 1 - progress;
+      line_width_multiplier = 1.0 + progress * line_width_multiplier_factor * +level.perfect_so_far;
       let handle = requestAnimationFrame(animate);
       cancel_state_animation = function() {
         cancelAnimationFrame(handle);
@@ -1278,6 +1303,7 @@ function doFadeToRoses() {
       // done
       setGameState(GameState.SmellTheRoses);
       asdf_alpha = 0;
+      line_width_multiplier = 1.0 + line_width_multiplier_factor * +level.perfect_so_far;
     }
     renderEverything();
   }
@@ -1297,6 +1323,7 @@ let level: Level;
 function loadNewLevel(level_number_delta: number) {
   level_number += level_number_delta;
   level = getLevelForCurrentLevelNumber();
+  line_width_multiplier = 1.0;
   save();
 
   // callers can set the state to something else after this.
@@ -1382,7 +1409,7 @@ function getLevelForCurrentLevelNumber(): Level {
   }
 
   // the final challenge
-  return generateLevel({size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.Single, cement_mode: true, toroidal: true, rough: true});
+  return generateLevel({size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.Single, cement_mode: true, toroidal: true, rough: true, perfectable: true});
 }
 
 function oneColor(values: number[]): number[][] {
@@ -1474,6 +1501,10 @@ function generateLevel(parameters: LevelParameters, tiles?: number[][]): Level {
     }
   }
 
+  if (parameters.perfectable) {
+    level.initializePossibilityForPerfect();
+  }
+
   return level;
 }
 
@@ -1518,10 +1549,13 @@ function save() {
     cement_mode: level.cement_mode,
     toroidal: level.toroidal,
     rough: level.rough,
+    // we don't care about perfectable when we're loading state.
     // game state
     tiles: level.tiles,
     frozen_tiles: level.frozen_tiles,
     recent_touch_queue: level.recent_touch_queue,
+    original_tiles: level.original_tiles,
+    perfect_so_far: level.perfect_so_far,
   };
   window.localStorage.setItem("loops", JSON.stringify(save_data));
 }
@@ -1559,6 +1593,8 @@ function save() {
 
     let rough = save_data.level.rough;
     if (typeof rough !== 'boolean') return null;
+
+    // we don't care about perfectable if we're loading state.
 
     let level_parameters: LevelParameters = {
       size, shape, colors, cement_mode, toroidal, rough,
@@ -1603,11 +1639,27 @@ function save() {
     if (recent_touch_queue.length > 3) return null;
     // don't need to be careful about what's in the queue.
 
+    let perfect_so_far = false;
+    let original_tiles = save_data.level.original_tiles;
+    if (original_tiles != null) {
+      if (!Array.isArray(original_tiles)) return null;
+      if (original_tiles.length !== size[0] * size[1]) return null;
+      for (let x of original_tiles) {
+        if (!Array.isArray(x)) return null;
+        // not much checking we have to do beyond that.
+      }
+
+      perfect_so_far = save_data.level.perfect_so_far;
+      if (typeof perfect_so_far !== "boolean") return null;
+    }
+
     // json reading complete. everything looks good.
     let loaded_level = new Level(level_parameters);
     loaded_level.tiles = tiles;
     loaded_level.frozen_tiles = frozen_tiles;
     loaded_level.recent_touch_queue = recent_touch_queue;
+    loaded_level.original_tiles = original_tiles;
+    loaded_level.perfect_so_far = perfect_so_far;
 
     return loaded_level;
   }
@@ -1619,7 +1671,6 @@ function save() {
     handleResize();
     checkForDone();
   } else {
-    //debugger; loadLevelData();
     loadNewLevel(0);
   }
 })();
