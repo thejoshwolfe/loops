@@ -13,6 +13,10 @@ https://wolfesoftware.com/loops/
 
 ## Version History
 
+#### 1.3.0:
+ * The final level gives a hint that you didn't
+   obviously waste clicks.
+
 #### 1.2.0:
  * The game state now saves and loads on page refresh,
    not just the level number (using `localStorage`).
