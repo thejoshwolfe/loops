@@ -118,6 +118,8 @@ class Level {
   tiles: number[][];
   frozen_tiles: {[tile_index:number]: boolean};
   recent_touch_queue: number[];
+  original_tiles?: number[][];
+  perfect_so_far: boolean;
 
   constructor(parameters: LevelParameters) {
     this.tiles_per_row = parameters.size[0];
@@ -126,6 +128,7 @@ class Level {
     this.cement_mode = parameters.cement_mode || false;
     this.toroidal = parameters.toroidal || false;
     this.rough = parameters.rough || false;
+    this.perfect_so_far = false;
 
     switch (parameters.colors) {
       case ColorRules.Single:
@@ -201,6 +204,11 @@ class Level {
 
     // TODO: odd width wrapping for hexagons is not trivial, and doesn't work yet.
     assert(!(this.shape == Shape.Hexagon && (this.tiles_per_row & 1) && this.toroidal));
+  }
+
+  initializePossibilityForPerfect(): void {
+    this.original_tiles = JSON.parse(JSON.stringify(this.tiles));
+    this.perfect_so_far = true;
   }
 
   getTileIndexFromDisplayPoint(display_x: number, display_y: number): number {
@@ -349,10 +357,22 @@ class Level {
   }
 
   rotateTile(tile_index: number, times: number): void {
+    let all_back_to_original_values = true;
     for (let color_index = 0; color_index < this.color_count; color_index++) {
       let color_value = this.tiles[tile_index][color_index];
       color_value = this.rotateValue(color_value, times);
       this.tiles[tile_index][color_index] = color_value;
+
+      if (this.perfect_so_far && this.original_tiles != null) {
+        if (this.original_tiles[tile_index][color_index] !== color_value) {
+          all_back_to_original_values = false;
+        }
+      }
+    }
+
+    if (all_back_to_original_values) {
+      // you rotated a tile all the way around.
+      this.perfect_so_far = false;
     }
   }
 
@@ -1297,6 +1317,7 @@ let level: Level;
 function loadNewLevel(level_number_delta: number) {
   level_number += level_number_delta;
   level = getLevelForCurrentLevelNumber();
+  level.initializePossibilityForPerfect();
   save();
 
   // callers can set the state to something else after this.
@@ -1522,6 +1543,8 @@ function save() {
     tiles: level.tiles,
     frozen_tiles: level.frozen_tiles,
     recent_touch_queue: level.recent_touch_queue,
+    original_tiles: level.original_tiles,
+    perfect_so_far: level.perfect_so_far,
   };
   window.localStorage.setItem("loops", JSON.stringify(save_data));
 }
@@ -1603,11 +1626,27 @@ function save() {
     if (recent_touch_queue.length > 3) return null;
     // don't need to be careful about what's in the queue.
 
+    let perfect_so_far = false;
+    let original_tiles = save_data.level.original_tiles;
+    if (original_tiles != null) {
+      if (!Array.isArray(original_tiles)) return null;
+      if (original_tiles.length !== size[0] * size[1]) return null;
+      for (let x of original_tiles) {
+        if (!Array.isArray(x)) return null;
+        // not much checking we have to do beyond that.
+      }
+
+      perfect_so_far = save_data.level.perfect_so_far;
+      if (typeof perfect_so_far !== "boolean") return null;
+    }
+
     // json reading complete. everything looks good.
     let loaded_level = new Level(level_parameters);
     loaded_level.tiles = tiles;
     loaded_level.frozen_tiles = frozen_tiles;
     loaded_level.recent_touch_queue = recent_touch_queue;
+    loaded_level.original_tiles = original_tiles;
+    loaded_level.perfect_so_far = perfect_so_far;
 
     return loaded_level;
   }
@@ -1619,7 +1658,6 @@ function save() {
     handleResize();
     checkForDone();
   } else {
-    //debugger; loadLevelData();
     loadNewLevel(0);
   }
 })();
