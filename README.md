@@ -44,8 +44,30 @@ https://wolfesoftware.com/loops/
  * Island of locked tiles in the middle of toroidal levels
  * "Smell the roses" after completing a level before the transition to the next level
 
-## Build
+## Development
+
+Dependencies:
+
+* npm (for development and building) (or any other way to run the TypeScript compiler)
+* python3 (for http server on localhost) (or anything else that does this)
+* s3cmd (for deployment to S3)
+
+In NixOS:
+
+* `nix-shell --pure --pure -p nodejs -p python3 -p s3cmd`
+
+To build:
 
 ```
 ./build.sh
+
+# alternatively:
+npm install
+./node_modules/.bin/tsc
+```
+
+To serve on http://localhost:8000/ :
+
+```
+(cd public && python3 -m http.server)
 ```
