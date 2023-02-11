@@ -450,6 +450,7 @@ class Level {
   }
 
   renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number, animation_progress: number, endpoint_style: EndpointStyle): void {
+    let alt_tileset = true;
     switch (this.shape) {
       case Shape.Square: {
         if (color_value === 0) return;
@@ -562,6 +563,7 @@ class Level {
           }
           // normalize rotation
           switch (color_value) {
+            // hoop
             case 1:  break;
             case 2:  color_value = 1; context.rotate(1/3*pi); break;
             case 4:  color_value = 1; context.rotate(2/3*pi); break;
@@ -569,6 +571,7 @@ class Level {
             case 16: color_value = 1; context.rotate(4/3*pi); break;
             case 32: color_value = 1; context.rotate(5/3*pi); break;
 
+            // hook
             case 3:  break;
             case 6:  color_value = 3; context.rotate(1/3*pi); break;
             case 12: color_value = 3; context.rotate(2/3*pi); break;
@@ -576,6 +579,7 @@ class Level {
             case 48: color_value = 3; context.rotate(4/3*pi); break;
             case 33: color_value = 3; context.rotate(5/3*pi); break;
 
+            // noodle
             case 5:  break;
             case 10: color_value = 5; context.rotate(1/3*pi); break;
             case 20: color_value = 5; context.rotate(2/3*pi); break;
@@ -583,6 +587,7 @@ class Level {
             case 17: color_value = 5; context.rotate(4/3*pi); break;
             case 34: color_value = 5; context.rotate(5/3*pi); break;
 
+            // bird
             case 7:  break;
             case 14: color_value = 7; context.rotate(1/3*pi); break;
             case 28: color_value = 7; context.rotate(2/3*pi); break;
@@ -590,10 +595,12 @@ class Level {
             case 49: color_value = 7; context.rotate(4/3*pi); break;
             case 35: color_value = 7; context.rotate(5/3*pi); break;
 
+            // stick
             case 9:  break;
             case 18: color_value = 9; context.rotate(1/3*pi); break;
             case 36: color_value = 9; context.rotate(2/3*pi); break;
 
+            // right shoe
             case 11: break;
             case 22: color_value = 11; context.rotate(1/3*pi); break;
             case 44: color_value = 11; context.rotate(2/3*pi); break;
@@ -601,6 +608,7 @@ class Level {
             case 50: color_value = 11; context.rotate(4/3*pi); break;
             case 37: color_value = 11; context.rotate(5/3*pi); break;
 
+            // left shoe
             case 13: break;
             case 26: color_value = 13; context.rotate(1/3*pi); break;
             case 52: color_value = 13; context.rotate(2/3*pi); break;
@@ -608,6 +616,7 @@ class Level {
             case 19: color_value = 13; context.rotate(4/3*pi); break;
             case 38: color_value = 13; context.rotate(5/3*pi); break;
 
+            // comb
             case 15: break;
             case 30: color_value = 15; context.rotate(1/3*pi); break;
             case 60: color_value = 15; context.rotate(2/3*pi); break;
@@ -615,9 +624,11 @@ class Level {
             case 51: color_value = 15; context.rotate(4/3*pi); break;
             case 39: color_value = 15; context.rotate(5/3*pi); break;
 
+            // triangle
             case 21: break;
             case 42: color_value = 21; context.rotate(1/3*pi); break;
 
+            // space ship
             case 23: break;
             case 46: color_value = 23; context.rotate(1/3*pi); break;
             case 29: color_value = 23; context.rotate(2/3*pi); break;
@@ -625,10 +636,12 @@ class Level {
             case 53: color_value = 23; context.rotate(4/3*pi); break;
             case 43: color_value = 23; context.rotate(5/3*pi); break;
 
+            // pisces
             case 27: break;
             case 54: color_value = 27; context.rotate(1/3*pi); break;
             case 45: color_value = 27; context.rotate(2/3*pi); break;
 
+            // dragon
             case 31: break;
             case 62: color_value = 31; context.rotate(1/3*pi); break;
             case 61: color_value = 31; context.rotate(2/3*pi); break;
@@ -636,6 +649,7 @@ class Level {
             case 55: color_value = 31; context.rotate(4/3*pi); break;
             case 47: color_value = 31; context.rotate(5/3*pi); break;
 
+            // shuriken
             case 63: break;
 
             default: throw new AssertionFailure();
@@ -693,23 +707,47 @@ class Level {
               context.stroke();
               break;
             case 11: // right shoe
-              context.beginPath();
-              context.arc(-1.5, sqrt3/2, 1.5, 5/3*pi, 2*pi);
-              context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-              context.stroke();
+              if (alt_tileset) {
+                context.beginPath();
+                context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+                context.lineTo(-0.75, -sqrt3 / 4);
+                context.stroke();
+              } else {
+                context.beginPath();
+                context.arc(-1.5, sqrt3/2, 1.5, 5/3*pi, 2*pi);
+                context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+                context.stroke();
+              }
               break;
             case 13: // left shoe
-              context.beginPath();
-              context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
-              context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
-              context.stroke();
+              if (alt_tileset) {
+                context.beginPath();
+                context.moveTo(0.75, sqrt3 / 4);
+                context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
+                context.stroke();
+              } else {
+                context.beginPath();
+                context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
+                context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
+                context.stroke();
+              }
               break;
             case 15: // comb
-              context.beginPath();
-              context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
-              context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
-              context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-              context.stroke();
+              if (alt_tileset) {
+                context.beginPath();
+                context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
+                context.stroke();
+                context.rotate(pi/3);
+                context.beginPath();
+                context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
+                context.stroke();
+              } else {
+                context.beginPath();
+                context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
+                context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
+                context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+                context.stroke();
+              }
               break;
             case 21: // triangle
               context.beginPath();
@@ -719,38 +757,91 @@ class Level {
               context.stroke();
               break;
             case 23: // space ship
-              context.beginPath();
-              context.arc(1.5, -sqrt3/2, 1.5, 2/3*pi, pi);
-              context.arc(-1.5, -sqrt3/2, 1.5, 0, 1/3*pi);
-              context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
-              context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-              context.stroke();
+              if (alt_tileset) {
+                context.beginPath();
+                context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
+                context.stroke();
+                context.beginPath();
+                context.moveTo(0, sqrt3/2);
+                context.lineTo(0, -sqrt3/2);
+                context.stroke();
+              } else {
+                context.beginPath();
+                context.arc(1.5, -sqrt3/2, 1.5, 2/3*pi, pi);
+                context.arc(-1.5, -sqrt3/2, 1.5, 0, 1/3*pi);
+                context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
+                context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+                context.stroke();
+              }
               break;
             case 27: // pisces
-              context.beginPath();
-              context.arc(-0.5, -sqrt3/2, 0.5, 0, 2/3*pi);
-              context.stroke();
-              context.beginPath();
-              context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-              context.stroke();
+              if (alt_tileset) {
+                context.beginPath();
+                context.moveTo(0.75, sqrt3 / 4);
+                context.lineTo(-0.75, -sqrt3 / 4);
+                context.stroke();
+                context.beginPath();
+                context.moveTo(0, sqrt3/2);
+                context.lineTo(0, -sqrt3/2);
+                context.stroke();
+              } else {
+                context.beginPath();
+                context.arc(-0.5, -sqrt3/2, 0.5, 0, 2/3*pi);
+                context.stroke();
+                context.beginPath();
+                context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+                context.stroke();
+              }
               break;
             case 31: // dragon
-              context.beginPath();
-              context.arc(-0.5, -sqrt3/2, 0.5, 0, 2/3*pi);
-              context.arc(-1, 0, 0.5, 5/3*pi, 7/3*pi);
-              context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
-              context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-              context.stroke();
+              if (alt_tileset) {
+                context.beginPath();
+                context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
+                context.stroke();
+                context.rotate(pi/3);
+                context.beginPath();
+                context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+                context.stroke();
+                context.rotate(pi/3);
+                context.beginPath();
+                context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+                context.stroke();
+                context.beginPath();
+                context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
+                context.stroke();
+              } else {
+                context.beginPath();
+                context.arc(-0.5, -sqrt3/2, 0.5, 0, 2/3*pi);
+                context.arc(-1, 0, 0.5, 5/3*pi, 7/3*pi);
+                context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
+                context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+                context.stroke();
+              }
               break;
             case 63: // shuriken
-              context.beginPath();
-              context.arc(1, 0, 0.5, 2/3*pi, 4/3*pi);
-              context.arc(0.5, -sqrt3/2, 0.5, 1/3*pi, pi);
-              context.arc(-0.5, -sqrt3/2, 0.5, 0, 2/3*pi);
-              context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
-              context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
-              context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-              context.stroke();
+              if (alt_tileset) {
+                context.beginPath();
+                context.moveTo(0.75, sqrt3 / 4);
+                context.lineTo(-0.75, -sqrt3 / 4);
+                context.stroke();
+                context.beginPath();
+                context.moveTo(0, sqrt3/2);
+                context.lineTo(0, -sqrt3/2);
+                context.stroke();
+                context.beginPath();
+                context.moveTo(0.75, -sqrt3 / 4);
+                context.lineTo(-0.75, sqrt3 / 4);
+                context.stroke();
+              } else {
+                context.beginPath();
+                context.arc(1, 0, 0.5, 2/3*pi, 4/3*pi);
+                context.arc(0.5, -sqrt3/2, 0.5, 1/3*pi, pi);
+                context.arc(-0.5, -sqrt3/2, 0.5, 0, 2/3*pi);
+                context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
+                context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
+                context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+                context.stroke();
+              }
               break;
 
             default: throw new AssertionFailure();
