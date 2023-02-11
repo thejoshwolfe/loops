@@ -85,7 +85,7 @@ enum EndpointStyle {
 enum TileSet {
   Trypo,
   Ribbon,
-  Stabby,
+  Iso,
 }
 
 type Coord = {x:number, y:number};
@@ -218,7 +218,7 @@ class Level {
     // TODO: odd width wrapping for hexagons is not trivial, and doesn't work yet.
     assert(!(this.shape == Shape.Hexagon && (this.tiles_per_row & 1) && this.toroidal));
 
-    this.tile_set = TileSet.Trypo;
+    this.tile_set = TileSet.Iso;
   }
 
   initializePossibilityForPerfect(): void {
@@ -571,6 +571,20 @@ class Level {
           if (animation_progress !== 0) {
             context.rotate(pi/3 * animation_progress);
           }
+
+          if (this.tile_set === TileSet.Iso) {
+            for (let i = 0; i < 6; i++) {
+              if (color_value & (1 << i)) {
+                context.beginPath();
+                context.moveTo(0, 0);
+                context.lineTo(0.75, sqrt3/4);
+                context.stroke();
+              }
+              context.rotate(pi/3);
+            }
+            break;
+          }
+
           // normalize rotation
           switch (color_value) {
             // hoop
@@ -667,54 +681,79 @@ class Level {
           // render normalized value
           switch (color_value) {
             case 1: // hoop
-              context.rotate(pi/6);
-              switch (endpoint_style) {
-                case EndpointStyle.LargeRing:
-                  context.beginPath();
-                  context.arc(0, 0, 0.5, 0, 2*pi);
-                  context.lineTo(sqrt3 / 2, 0);
-                  context.stroke();
-                  break;
-                case EndpointStyle.SmallRing:
-                  context.beginPath();
-                  context.arc(0, 0, 0.33, 0, 2*pi);
-                  context.lineTo(sqrt3 / 2, 0);
-                  context.stroke();
-                  break;
-                case EndpointStyle.LargeDot:
-                  context.beginPath();
-                  context.arc(0, 0, 0.5, 0, 2*pi);
-                  context.fill();
+              switch (this.tile_set) {
+                case TileSet.Ribbon:
+                case TileSet.Trypo:
+                  context.rotate(pi/6);
+                  switch (endpoint_style) {
+                    case EndpointStyle.LargeRing:
+                      context.beginPath();
+                      context.arc(0, 0, 0.5, 0, 2*pi);
+                      context.lineTo(sqrt3 / 2, 0);
+                      context.stroke();
+                      break;
+                    case EndpointStyle.SmallRing:
+                      context.beginPath();
+                      context.arc(0, 0, 0.33, 0, 2*pi);
+                      context.lineTo(sqrt3 / 2, 0);
+                      context.stroke();
+                      break;
+                    case EndpointStyle.LargeDot:
+                      context.beginPath();
+                      context.arc(0, 0, 0.5, 0, 2*pi);
+                      context.fill();
 
-                  context.beginPath();
-                  context.moveTo(0, 0);
-                  context.lineTo(sqrt3 / 2, 0);
-                  context.stroke();
+                      context.beginPath();
+                      context.moveTo(0, 0);
+                      context.lineTo(sqrt3 / 2, 0);
+                      context.stroke();
+                      break;
+                    default: throw new AssertionFailure();
+                  }
                   break;
-                default: throw new AssertionFailure();
               }
               break;
             case 3: // hook
-              context.beginPath();
-              context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-              context.stroke();
+              switch (this.tile_set) {
+                case TileSet.Ribbon:
+                case TileSet.Trypo:
+                  context.beginPath();
+                  context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+                  context.stroke();
+                  break;
+              }
               break;
             case 5: // noodle
-              context.beginPath();
-              context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
-              context.stroke();
+              switch (this.tile_set) {
+                case TileSet.Ribbon:
+                case TileSet.Trypo:
+                  context.beginPath();
+                  context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
+                  context.stroke();
+                  break;
+              }
               break;
             case 7: // bird
-              context.beginPath();
-              context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
-              context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-              context.stroke();
+              switch (this.tile_set) {
+                case TileSet.Ribbon:
+                case TileSet.Trypo:
+                  context.beginPath();
+                  context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
+                  context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+                  context.stroke();
+                  break;
+              }
               break;
             case 9: // stick
-              context.beginPath();
-              context.moveTo(0.75, sqrt3 / 4);
-              context.lineTo(-0.75, -sqrt3 / 4);
-              context.stroke();
+              switch (this.tile_set) {
+                case TileSet.Ribbon:
+                case TileSet.Trypo:
+                  context.beginPath();
+                  context.moveTo(0.75, sqrt3 / 4);
+                  context.lineTo(-0.75, -sqrt3 / 4);
+                  context.stroke();
+                  break;
+              }
               break;
             case 11: // right shoe
               switch (this.tile_set) {
@@ -769,11 +808,16 @@ class Level {
               }
               break;
             case 21: // triangle
-              context.beginPath();
-              context.arc(1.5, -sqrt3/2, 1.5, 2/3*pi, pi);
-              context.arc(-1.5, -sqrt3/2, 1.5, 0, 1/3*pi);
-              context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
-              context.stroke();
+              switch (this.tile_set) {
+                case TileSet.Ribbon:
+                case TileSet.Trypo:
+                  context.beginPath();
+                  context.arc(1.5, -sqrt3/2, 1.5, 2/3*pi, pi);
+                  context.arc(-1.5, -sqrt3/2, 1.5, 0, 1/3*pi);
+                  context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
+                  context.stroke();
+                  break;
+              }
               break;
             case 23: // space ship
               switch (this.tile_set) {
