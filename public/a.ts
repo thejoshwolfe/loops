@@ -560,6 +560,7 @@ class Level {
           if (animation_progress !== 0) {
             context.rotate(pi/3 * animation_progress);
           }
+          // normalize rotation
           switch (color_value) {
             case 1:  break;
             case 2:  color_value = 1; context.rotate(1/3*pi); break;
@@ -639,8 +640,9 @@ class Level {
 
             default: throw new AssertionFailure();
           }
+          // render normalized value
           switch (color_value) {
-            case 1:
+            case 1: // hoop
               context.rotate(pi/6);
               switch (endpoint_style) {
                 case EndpointStyle.LargeRing:
@@ -668,55 +670,55 @@ class Level {
                 default: throw new AssertionFailure();
               }
               break;
-            case 3:
+            case 3: // hook
               context.beginPath();
               context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
               context.stroke();
               break;
-            case 5:
+            case 5: // noodle
               context.beginPath();
               context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
               context.stroke();
               break;
-            case 7:
+            case 7: // bird
               context.beginPath();
               context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
               context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
               context.stroke();
               break;
-            case 9:
+            case 9: // stick
               context.beginPath();
               context.moveTo(0.75, sqrt3 / 4);
               context.lineTo(-0.75, -sqrt3 / 4);
               context.stroke();
               break;
-            case 11:
+            case 11: // right shoe
               context.beginPath();
               context.arc(-1.5, sqrt3/2, 1.5, 5/3*pi, 2*pi);
               context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
               context.stroke();
               break;
-            case 13:
+            case 13: // left shoe
               context.beginPath();
               context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
               context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
               context.stroke();
               break;
-            case 15:
+            case 15: // comb
               context.beginPath();
               context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
               context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
               context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
               context.stroke();
               break;
-            case 21:
+            case 21: // triangle
               context.beginPath();
               context.arc(1.5, -sqrt3/2, 1.5, 2/3*pi, pi);
               context.arc(-1.5, -sqrt3/2, 1.5, 0, 1/3*pi);
               context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
               context.stroke();
               break;
-            case 23:
+            case 23: // space ship
               context.beginPath();
               context.arc(1.5, -sqrt3/2, 1.5, 2/3*pi, pi);
               context.arc(-1.5, -sqrt3/2, 1.5, 0, 1/3*pi);
@@ -724,7 +726,7 @@ class Level {
               context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
               context.stroke();
               break;
-            case 27:
+            case 27: // pisces
               context.beginPath();
               context.arc(-0.5, -sqrt3/2, 0.5, 0, 2/3*pi);
               context.stroke();
@@ -732,7 +734,7 @@ class Level {
               context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
               context.stroke();
               break;
-            case 31:
+            case 31: // dragon
               context.beginPath();
               context.arc(-0.5, -sqrt3/2, 0.5, 0, 2/3*pi);
               context.arc(-1, 0, 0.5, 5/3*pi, 7/3*pi);
@@ -740,7 +742,7 @@ class Level {
               context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
               context.stroke();
               break;
-            case 63:
+            case 63: // shuriken
               context.beginPath();
               context.arc(1, 0, 0.5, 2/3*pi, 4/3*pi);
               context.arc(0.5, -sqrt3/2, 0.5, 1/3*pi, pi);
