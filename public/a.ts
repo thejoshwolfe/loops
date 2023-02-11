@@ -82,6 +82,12 @@ enum EndpointStyle {
   LargeDot,
 }
 
+enum TileSet {
+  Trypo,
+  Ribbon,
+  Stabby,
+}
+
 type Coord = {x:number, y:number};
 type Vector = {tile_index:number, direction:number};
 
@@ -124,6 +130,9 @@ class Level {
   recent_touch_queue: number[];
   original_tiles?: number[][];
   perfect_so_far: boolean;
+
+  // Aesthetics
+  tile_set: TileSet;
 
   constructor(parameters: LevelParameters) {
     this.tiles_per_row = parameters.size[0];
@@ -208,6 +217,8 @@ class Level {
 
     // TODO: odd width wrapping for hexagons is not trivial, and doesn't work yet.
     assert(!(this.shape == Shape.Hexagon && (this.tiles_per_row & 1) && this.toroidal));
+
+    this.tile_set = TileSet.Trypo;
   }
 
   initializePossibilityForPerfect(): void {
@@ -450,7 +461,6 @@ class Level {
   }
 
   renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number, animation_progress: number, endpoint_style: EndpointStyle): void {
-    let alt_tileset = true;
     switch (this.shape) {
       case Shape.Square: {
         if (color_value === 0) return;
@@ -707,46 +717,55 @@ class Level {
               context.stroke();
               break;
             case 11: // right shoe
-              if (alt_tileset) {
-                context.beginPath();
-                context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-                context.lineTo(-0.75, -sqrt3 / 4);
-                context.stroke();
-              } else {
-                context.beginPath();
-                context.arc(-1.5, sqrt3/2, 1.5, 5/3*pi, 2*pi);
-                context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-                context.stroke();
+              switch (this.tile_set) {
+                case TileSet.Ribbon:
+                  context.beginPath();
+                  context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+                  context.lineTo(-0.75, -sqrt3 / 4);
+                  context.stroke();
+                  break;
+                case TileSet.Trypo:
+                  context.beginPath();
+                  context.arc(-1.5, sqrt3/2, 1.5, 5/3*pi, 2*pi);
+                  context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+                  context.stroke();
+                  break;
               }
               break;
             case 13: // left shoe
-              if (alt_tileset) {
-                context.beginPath();
-                context.moveTo(0.75, sqrt3 / 4);
-                context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
-                context.stroke();
-              } else {
-                context.beginPath();
-                context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
-                context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
-                context.stroke();
+              switch (this.tile_set) {
+                case TileSet.Ribbon:
+                  context.beginPath();
+                  context.moveTo(0.75, sqrt3 / 4);
+                  context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
+                  context.stroke();
+                  break;
+                case TileSet.Trypo:
+                  context.beginPath();
+                  context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
+                  context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
+                  context.stroke();
+                  break;
               }
               break;
             case 15: // comb
-              if (alt_tileset) {
-                context.beginPath();
-                context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
-                context.stroke();
-                context.rotate(pi/3);
-                context.beginPath();
-                context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
-                context.stroke();
-              } else {
-                context.beginPath();
-                context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
-                context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
-                context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-                context.stroke();
+              switch (this.tile_set) {
+                case TileSet.Ribbon:
+                  context.beginPath();
+                  context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
+                  context.stroke();
+                  context.rotate(pi/3);
+                  context.beginPath();
+                  context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
+                  context.stroke();
+                  break;
+                case TileSet.Trypo:
+                  context.beginPath();
+                  context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
+                  context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
+                  context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+                  context.stroke();
+                  break;
               }
               break;
             case 21: // triangle
@@ -757,90 +776,102 @@ class Level {
               context.stroke();
               break;
             case 23: // space ship
-              if (alt_tileset) {
-                context.beginPath();
-                context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
-                context.stroke();
-                context.beginPath();
-                context.moveTo(0, sqrt3/2);
-                context.lineTo(0, -sqrt3/2);
-                context.stroke();
-              } else {
-                context.beginPath();
-                context.arc(1.5, -sqrt3/2, 1.5, 2/3*pi, pi);
-                context.arc(-1.5, -sqrt3/2, 1.5, 0, 1/3*pi);
-                context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
-                context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-                context.stroke();
+              switch (this.tile_set) {
+                case TileSet.Ribbon:
+                  context.beginPath();
+                  context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
+                  context.stroke();
+                  context.beginPath();
+                  context.moveTo(0, sqrt3/2);
+                  context.lineTo(0, -sqrt3/2);
+                  context.stroke();
+                  break;
+                case TileSet.Trypo:
+                  context.beginPath();
+                  context.arc(1.5, -sqrt3/2, 1.5, 2/3*pi, pi);
+                  context.arc(-1.5, -sqrt3/2, 1.5, 0, 1/3*pi);
+                  context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
+                  context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+                  context.stroke();
+                  break;
               }
               break;
             case 27: // pisces
-              if (alt_tileset) {
-                context.beginPath();
-                context.moveTo(0.75, sqrt3 / 4);
-                context.lineTo(-0.75, -sqrt3 / 4);
-                context.stroke();
-                context.beginPath();
-                context.moveTo(0, sqrt3/2);
-                context.lineTo(0, -sqrt3/2);
-                context.stroke();
-              } else {
-                context.beginPath();
-                context.arc(-0.5, -sqrt3/2, 0.5, 0, 2/3*pi);
-                context.stroke();
-                context.beginPath();
-                context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-                context.stroke();
+              switch (this.tile_set) {
+                case TileSet.Ribbon:
+                  context.beginPath();
+                  context.moveTo(0.75, sqrt3 / 4);
+                  context.lineTo(-0.75, -sqrt3 / 4);
+                  context.stroke();
+                  context.beginPath();
+                  context.moveTo(0, sqrt3/2);
+                  context.lineTo(0, -sqrt3/2);
+                  context.stroke();
+                  break;
+                case TileSet.Trypo:
+                  context.beginPath();
+                  context.arc(-0.5, -sqrt3/2, 0.5, 0, 2/3*pi);
+                  context.stroke();
+                  context.beginPath();
+                  context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+                  context.stroke();
+                  break;
               }
               break;
             case 31: // dragon
-              if (alt_tileset) {
-                context.beginPath();
-                context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
-                context.stroke();
-                context.rotate(pi/3);
-                context.beginPath();
-                context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-                context.stroke();
-                context.rotate(pi/3);
-                context.beginPath();
-                context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-                context.stroke();
-                context.beginPath();
-                context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
-                context.stroke();
-              } else {
-                context.beginPath();
-                context.arc(-0.5, -sqrt3/2, 0.5, 0, 2/3*pi);
-                context.arc(-1, 0, 0.5, 5/3*pi, 7/3*pi);
-                context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
-                context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-                context.stroke();
+              switch (this.tile_set) {
+                case TileSet.Ribbon:
+                  context.beginPath();
+                  context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
+                  context.stroke();
+                  context.rotate(pi/3);
+                  context.beginPath();
+                  context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+                  context.stroke();
+                  context.rotate(pi/3);
+                  context.beginPath();
+                  context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+                  context.stroke();
+                  context.beginPath();
+                  context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
+                  context.stroke();
+                  break;
+                case TileSet.Trypo:
+                  context.beginPath();
+                  context.arc(-0.5, -sqrt3/2, 0.5, 0, 2/3*pi);
+                  context.arc(-1, 0, 0.5, 5/3*pi, 7/3*pi);
+                  context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
+                  context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+                  context.stroke();
+                  break;
               }
               break;
             case 63: // shuriken
-              if (alt_tileset) {
-                context.beginPath();
-                context.moveTo(0.75, sqrt3 / 4);
-                context.lineTo(-0.75, -sqrt3 / 4);
-                context.stroke();
-                context.beginPath();
-                context.moveTo(0, sqrt3/2);
-                context.lineTo(0, -sqrt3/2);
-                context.stroke();
-                context.beginPath();
-                context.moveTo(0.75, -sqrt3 / 4);
-                context.lineTo(-0.75, sqrt3 / 4);
-                context.stroke();
-              } else {
-                context.beginPath();
-                context.arc(1, 0, 0.5, 2/3*pi, 4/3*pi);
-                context.arc(0.5, -sqrt3/2, 0.5, 1/3*pi, pi);
-                context.arc(-0.5, -sqrt3/2, 0.5, 0, 2/3*pi);
-                context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
-                context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
-                context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-                context.stroke();
+              switch (this.tile_set) {
+                case TileSet.Ribbon:
+                  context.beginPath();
+                  context.moveTo(0.75, sqrt3 / 4);
+                  context.lineTo(-0.75, -sqrt3 / 4);
+                  context.stroke();
+                  context.beginPath();
+                  context.moveTo(0, sqrt3/2);
+                  context.lineTo(0, -sqrt3/2);
+                  context.stroke();
+                  context.beginPath();
+                  context.moveTo(0.75, -sqrt3 / 4);
+                  context.lineTo(-0.75, sqrt3 / 4);
+                  context.stroke();
+                  break;
+                case TileSet.Trypo:
+                  context.beginPath();
+                  context.arc(1, 0, 0.5, 2/3*pi, 4/3*pi);
+                  context.arc(0.5, -sqrt3/2, 0.5, 1/3*pi, pi);
+                  context.arc(-0.5, -sqrt3/2, 0.5, 0, 2/3*pi);
+                  context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
+                  context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
+                  context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+                  context.stroke();
+                  break;
               }
               break;
 
