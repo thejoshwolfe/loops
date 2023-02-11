@@ -93,6 +93,7 @@ interface LevelParameters {
   toroidal?: boolean,
   rough?: boolean,
   perfectable?: boolean,
+  shuffle_tiles?: boolean,
 };
 
 class Level {
@@ -1006,16 +1007,24 @@ window.addEventListener("keydown", function(event: KeyboardEvent) {
     // cheatcodes to navigate levels
     case "BracketRight":
       if (event.shiftKey) {
-        loadNewLevel(6);
+        loadNewLevel({delta: 6});
       } else {
-        loadNewLevel(1);
+        loadNewLevel({delta: 1});
       }
       break;
     case "BracketLeft":
       if (event.shiftKey) {
-        loadNewLevel(-6);
+        loadNewLevel({delta: -6});
       } else {
-        loadNewLevel(-1);
+        loadNewLevel({delta: -1});
+      }
+      break;
+
+    // Cheatcode to generate a finished level.
+    case "KeyR":
+      if (event.shiftKey) {
+        loadNewLevel({shuffle_tiles: false});
+        checkForDone();
       }
       break;
   }
@@ -1200,7 +1209,7 @@ function clickTile(tile_index: number): boolean {
             // malformed input
             level_number = 0;
           }
-          loadNewLevel(0);
+          loadNewLevel();
         }, 0);
         return false;
       }
@@ -1312,7 +1321,7 @@ function doFadeToRoses() {
 function advanceToNextLevel() {
   render_enabled = false;
   try {
-    loadNewLevel(1);
+    loadNewLevel({delta: 1});
   } finally {
     render_enabled = true;
   }
@@ -1320,9 +1329,11 @@ function advanceToNextLevel() {
 }
 
 let level: Level;
-function loadNewLevel(level_number_delta: number) {
-  level_number += level_number_delta;
-  level = getLevelForCurrentLevelNumber();
+function loadNewLevel(opts?: {delta?: number, shuffle_tiles?: boolean}) {
+  if (opts?.delta != null) {
+    level_number += opts.delta;
+  }
+  level = getLevelForCurrentLevelNumber(opts?.shuffle_tiles ?? true);
   line_width_multiplier = 1.0;
   save();
 
@@ -1330,7 +1341,7 @@ function loadNewLevel(level_number_delta: number) {
   setGameState(GameState.Playing);
   handleResize();
 }
-function getLevelForCurrentLevelNumber(): Level {
+function getLevelForCurrentLevelNumber(shuffle_tiles: boolean): Level {
   if (level_number < 1) level_number = 1;
 
   switch (level_number) {
@@ -1356,60 +1367,67 @@ function getLevelForCurrentLevelNumber(): Level {
         0,12, 1, 4, 0,
         0, 0, 0, 0, 0,
       ]));
-    case 4:
-      return generateLevel({size:[7, 7], shape: Shape.Square, colors: ColorRules.Single});
-    case 5:
-      return generateLevel({size:[8, 8], shape: Shape.Square, colors: ColorRules.Single});
-    case 6:
-      return generateLevel({size:[5, 5], shape: Shape.Hexagon, colors: ColorRules.Single});
-    case 7:
-      return generateLevel({size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.Single});
-    case 8:
-      return generateLevel({size:[7, 7], shape: Shape.Hexagon, colors: ColorRules.Single});
-    case 9:
-      return generateLevel({size:[8, 8], shape: Shape.Hexagon, colors: ColorRules.Single});
-    case 10:
-      return generateLevel({size:[7, 7], shape: Shape.Square, colors: ColorRules.TwoSeparate});
-    case 11:
-      return generateLevel({size:[9, 9], shape: Shape.Square, colors: ColorRules.TwoSeparate, rough: true});
-    case 12:
-      return generateLevel({size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.TwoSeparate});
-    case 13:
-      return generateLevel({size:[8, 8], shape: Shape.Hexagon, colors: ColorRules.TwoSeparate, rough: true});
-    case 14:
-      return generateLevel({size:[9, 9], shape: Shape.Square, colors: ColorRules.TwoOverlap});
-    case 15:
-      return generateLevel({size:[8, 8], shape: Shape.Hexagon, colors: ColorRules.TwoOverlap, rough: true});
-
-    case 16:
-      return generateLevel({size:[10, 10], shape: Shape.Square, colors: ColorRules.TwoOverlap, cement_mode: true, rough: true});
-    case 17:
-      return generateLevel({size:[9, 9], shape: Shape.Hexagon, colors: ColorRules.TwoOverlap, cement_mode: true, rough: true});
-    case 18:
-      return generateLevel({size:[10, 10], shape: Shape.Square, colors: ColorRules.TwoSeparate, cement_mode: true, rough: true});
-    case 19:
-      return generateLevel({size:[9, 9], shape: Shape.Hexagon, colors: ColorRules.TwoSeparate, cement_mode: true, rough: true});
-    case 20:
-      return generateLevel({size:[10, 10], shape: Shape.Square, colors: ColorRules.Single, cement_mode: true, rough: true});
-    case 21:
-      return generateLevel({size:[9, 9], shape: Shape.Hexagon, colors: ColorRules.Single, cement_mode: true, rough: true});
-
-    case 22:
-      return generateLevel({size:[6, 6], shape: Shape.Square, colors: ColorRules.TwoOverlap, toroidal: true, rough: true});
-    case 23:
-      return generateLevel({size:[6, 6], shape: Shape.Square, colors: ColorRules.TwoSeparate, toroidal: true, rough: true});
-    case 24:
-      return generateLevel({size:[6, 6], shape: Shape.Square, colors: ColorRules.Single, toroidal: true, rough: true});
-    case 25:
-      return generateLevel({size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.TwoOverlap, toroidal: true, rough: true});
-    case 26:
-      return generateLevel({size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.TwoSeparate, toroidal: true, rough: true});
-    case 27:
-      return generateLevel({size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.Single, toroidal: true, rough: true});
   }
+  let params = function(): LevelParameters {
+    switch (level_number) {
+      case 4:
+        return {size:[7, 7], shape: Shape.Square, colors: ColorRules.Single};
+      case 5:
+        return {size:[8, 8], shape: Shape.Square, colors: ColorRules.Single};
+      case 6:
+        return {size:[5, 5], shape: Shape.Hexagon, colors: ColorRules.Single};
+      case 7:
+        return {size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.Single};
+      case 8:
+        return {size:[7, 7], shape: Shape.Hexagon, colors: ColorRules.Single};
+      case 9:
+        return {size:[8, 8], shape: Shape.Hexagon, colors: ColorRules.Single};
+      case 10:
+        return {size:[7, 7], shape: Shape.Square, colors: ColorRules.TwoSeparate};
+      case 11:
+        return {size:[9, 9], shape: Shape.Square, colors: ColorRules.TwoSeparate, rough: true};
+      case 12:
+        return {size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.TwoSeparate};
+      case 13:
+        return {size:[8, 8], shape: Shape.Hexagon, colors: ColorRules.TwoSeparate, rough: true};
+      case 14:
+        return {size:[9, 9], shape: Shape.Square, colors: ColorRules.TwoOverlap};
+      case 15:
+        return {size:[8, 8], shape: Shape.Hexagon, colors: ColorRules.TwoOverlap, rough: true};
 
-  // the final challenge
-  return generateLevel({size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.Single, cement_mode: true, toroidal: true, rough: true, perfectable: true});
+      case 16:
+        return {size:[10, 10], shape: Shape.Square, colors: ColorRules.TwoOverlap, cement_mode: true, rough: true};
+      case 17:
+        return {size:[9, 9], shape: Shape.Hexagon, colors: ColorRules.TwoOverlap, cement_mode: true, rough: true};
+      case 18:
+        return {size:[10, 10], shape: Shape.Square, colors: ColorRules.TwoSeparate, cement_mode: true, rough: true};
+      case 19:
+        return {size:[9, 9], shape: Shape.Hexagon, colors: ColorRules.TwoSeparate, cement_mode: true, rough: true};
+      case 20:
+        return {size:[10, 10], shape: Shape.Square, colors: ColorRules.Single, cement_mode: true, rough: true};
+      case 21:
+        return {size:[9, 9], shape: Shape.Hexagon, colors: ColorRules.Single, cement_mode: true, rough: true};
+
+      case 22:
+        return {size:[6, 6], shape: Shape.Square, colors: ColorRules.TwoOverlap, toroidal: true, rough: true};
+      case 23:
+        return {size:[6, 6], shape: Shape.Square, colors: ColorRules.TwoSeparate, toroidal: true, rough: true};
+      case 24:
+        return {size:[6, 6], shape: Shape.Square, colors: ColorRules.Single, toroidal: true, rough: true};
+      case 25:
+        return {size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.TwoOverlap, toroidal: true, rough: true};
+      case 26:
+        return {size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.TwoSeparate, toroidal: true, rough: true};
+      case 27:
+        return {size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.Single, toroidal: true, rough: true};
+      default:
+        // the final challenge
+        return {size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.Single, cement_mode: true, toroidal: true, rough: true, perfectable: true};
+    }
+  }();
+
+  params.shuffle_tiles = shuffle_tiles;
+  return generateLevel(params);
 }
 
 function oneColor(values: number[]): number[][] {
@@ -1494,9 +1512,11 @@ function generateLevel(parameters: LevelParameters, tiles?: number[][]): Level {
     }
 
     // rotate the tiles randomly
-    for (let tile_index of level.allTileIndexes()) {
-      if (!level.frozen_tiles[tile_index]) {
-        level.rotateRandomly(tile_index);
+    if (parameters.shuffle_tiles) {
+      for (let tile_index of level.allTileIndexes()) {
+        if (!level.frozen_tiles[tile_index]) {
+          level.rotateRandomly(tile_index);
+        }
       }
     }
   }
@@ -1518,13 +1538,13 @@ function euclideanMod(numerator: number, denominator: number): number {
 }
 
 retry_button.addEventListener("click", function() {
-  loadNewLevel(0);
+  loadNewLevel();
   hideSidebar();
 });
 reset_button.addEventListener("click", function() {
   if (confirm("Really start back at level 1?")) {
     level_number = 1;
-    loadNewLevel(0);
+    loadNewLevel();
     hideSidebar();
   }
 });
@@ -1671,6 +1691,6 @@ function save() {
     handleResize();
     checkForDone();
   } else {
-    loadNewLevel(0);
+    loadNewLevel();
   }
 })();
