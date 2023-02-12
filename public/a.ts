@@ -1,10 +1,12 @@
 let level_number = 1;
 
 const canvas = document.getElementById("canvas")! as HTMLCanvasElement;
-const sidebar_tray = document.getElementById("sidebar")!;
-const sidebar_button = document.getElementById("hamburger")!;
-const retry_button = document.getElementById("retryButton")!;
-const reset_button = document.getElementById("resetButton")!;
+const sidebar_tray = document.getElementById("sidebar") as HTMLDivElement;
+const sidebar_button = document.getElementById("hamburger") as HTMLDivElement;
+const retry_button = document.getElementById("retryButton") as HTMLButtonElement;
+const reset_button = document.getElementById("resetButton") as HTMLButtonElement;
+const tile_set_div = document.getElementById("tileSetDiv") as HTMLDivElement;
+const tile_set_select = document.getElementById("tileSetSelect") as HTMLSelectElement;
 
 const pi = Math.PI;
 const sqrt3 = Math.sqrt(3);
@@ -40,6 +42,15 @@ enum GameState {
   FadeIn,
 }
 let game_state = GameState.Playing;
+
+// Aesthetics
+enum TileSet {
+  Trypo,
+  Ribbon,
+  Iso,
+  Chaos,
+}
+let tile_set: TileSet = TileSet.Trypo;
 
 enum Shape {
   // for Square, tile values are a bit for each edge:
@@ -449,7 +460,7 @@ class Level {
     }
   }
 
-  renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number, animation_progress: number, endpoint_style: EndpointStyle): void {
+  renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number, animation_progress: number, endpoint_style: EndpointStyle, tile_set: TileSet): void {
     switch (this.shape) {
       case Shape.Square: {
         if (color_value === 0) return;
@@ -560,7 +571,23 @@ class Level {
           if (animation_progress !== 0) {
             context.rotate(pi/3 * animation_progress);
           }
+
+          if (tile_set === TileSet.Iso) {
+            for (let i = 0; i < 6; i++) {
+              if (color_value & (1 << i)) {
+                context.beginPath();
+                context.moveTo(0, 0);
+                context.lineTo(0.75, sqrt3/4);
+                context.stroke();
+              }
+              context.rotate(pi/3);
+            }
+            break;
+          }
+
+          // normalize rotation
           switch (color_value) {
+            // hoop
             case 1:  break;
             case 2:  color_value = 1; context.rotate(1/3*pi); break;
             case 4:  color_value = 1; context.rotate(2/3*pi); break;
@@ -568,6 +595,7 @@ class Level {
             case 16: color_value = 1; context.rotate(4/3*pi); break;
             case 32: color_value = 1; context.rotate(5/3*pi); break;
 
+            // hook
             case 3:  break;
             case 6:  color_value = 3; context.rotate(1/3*pi); break;
             case 12: color_value = 3; context.rotate(2/3*pi); break;
@@ -575,6 +603,7 @@ class Level {
             case 48: color_value = 3; context.rotate(4/3*pi); break;
             case 33: color_value = 3; context.rotate(5/3*pi); break;
 
+            // noodle
             case 5:  break;
             case 10: color_value = 5; context.rotate(1/3*pi); break;
             case 20: color_value = 5; context.rotate(2/3*pi); break;
@@ -582,6 +611,7 @@ class Level {
             case 17: color_value = 5; context.rotate(4/3*pi); break;
             case 34: color_value = 5; context.rotate(5/3*pi); break;
 
+            // bird
             case 7:  break;
             case 14: color_value = 7; context.rotate(1/3*pi); break;
             case 28: color_value = 7; context.rotate(2/3*pi); break;
@@ -589,10 +619,12 @@ class Level {
             case 49: color_value = 7; context.rotate(4/3*pi); break;
             case 35: color_value = 7; context.rotate(5/3*pi); break;
 
+            // stick
             case 9:  break;
             case 18: color_value = 9; context.rotate(1/3*pi); break;
             case 36: color_value = 9; context.rotate(2/3*pi); break;
 
+            // right shoe
             case 11: break;
             case 22: color_value = 11; context.rotate(1/3*pi); break;
             case 44: color_value = 11; context.rotate(2/3*pi); break;
@@ -600,6 +632,7 @@ class Level {
             case 50: color_value = 11; context.rotate(4/3*pi); break;
             case 37: color_value = 11; context.rotate(5/3*pi); break;
 
+            // left shoe
             case 13: break;
             case 26: color_value = 13; context.rotate(1/3*pi); break;
             case 52: color_value = 13; context.rotate(2/3*pi); break;
@@ -607,6 +640,7 @@ class Level {
             case 19: color_value = 13; context.rotate(4/3*pi); break;
             case 38: color_value = 13; context.rotate(5/3*pi); break;
 
+            // comb
             case 15: break;
             case 30: color_value = 15; context.rotate(1/3*pi); break;
             case 60: color_value = 15; context.rotate(2/3*pi); break;
@@ -614,9 +648,11 @@ class Level {
             case 51: color_value = 15; context.rotate(4/3*pi); break;
             case 39: color_value = 15; context.rotate(5/3*pi); break;
 
+            // triangle
             case 21: break;
             case 42: color_value = 21; context.rotate(1/3*pi); break;
 
+            // space ship
             case 23: break;
             case 46: color_value = 23; context.rotate(1/3*pi); break;
             case 29: color_value = 23; context.rotate(2/3*pi); break;
@@ -624,10 +660,12 @@ class Level {
             case 53: color_value = 23; context.rotate(4/3*pi); break;
             case 43: color_value = 23; context.rotate(5/3*pi); break;
 
+            // pisces
             case 27: break;
             case 54: color_value = 27; context.rotate(1/3*pi); break;
             case 45: color_value = 27; context.rotate(2/3*pi); break;
 
+            // dragon
             case 31: break;
             case 62: color_value = 31; context.rotate(1/3*pi); break;
             case 61: color_value = 31; context.rotate(2/3*pi); break;
@@ -635,120 +673,250 @@ class Level {
             case 55: color_value = 31; context.rotate(4/3*pi); break;
             case 47: color_value = 31; context.rotate(5/3*pi); break;
 
+            // shuriken
             case 63: break;
 
             default: throw new AssertionFailure();
           }
+          // render normalized value
           switch (color_value) {
-            case 1:
-              context.rotate(pi/6);
-              switch (endpoint_style) {
-                case EndpointStyle.LargeRing:
-                  context.beginPath();
-                  context.arc(0, 0, 0.5, 0, 2*pi);
-                  context.lineTo(sqrt3 / 2, 0);
-                  context.stroke();
-                  break;
-                case EndpointStyle.SmallRing:
-                  context.beginPath();
-                  context.arc(0, 0, 0.33, 0, 2*pi);
-                  context.lineTo(sqrt3 / 2, 0);
-                  context.stroke();
-                  break;
-                case EndpointStyle.LargeDot:
-                  context.beginPath();
-                  context.arc(0, 0, 0.5, 0, 2*pi);
-                  context.fill();
+            case 1: // hoop
+              switch (tile_set) {
+                case TileSet.Ribbon:
+                case TileSet.Trypo:
+                  context.rotate(pi/6);
+                  switch (endpoint_style) {
+                    case EndpointStyle.LargeRing:
+                      context.beginPath();
+                      context.arc(0, 0, 0.5, 0, 2*pi);
+                      context.lineTo(sqrt3 / 2, 0);
+                      context.stroke();
+                      break;
+                    case EndpointStyle.SmallRing:
+                      context.beginPath();
+                      context.arc(0, 0, 0.33, 0, 2*pi);
+                      context.lineTo(sqrt3 / 2, 0);
+                      context.stroke();
+                      break;
+                    case EndpointStyle.LargeDot:
+                      context.beginPath();
+                      context.arc(0, 0, 0.5, 0, 2*pi);
+                      context.fill();
 
-                  context.beginPath();
-                  context.moveTo(0, 0);
-                  context.lineTo(sqrt3 / 2, 0);
-                  context.stroke();
+                      context.beginPath();
+                      context.moveTo(0, 0);
+                      context.lineTo(sqrt3 / 2, 0);
+                      context.stroke();
+                      break;
+                    default: throw new AssertionFailure();
+                  }
                   break;
-                default: throw new AssertionFailure();
               }
               break;
-            case 3:
-              context.beginPath();
-              context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-              context.stroke();
+            case 3: // hook
+              switch (tile_set) {
+                case TileSet.Ribbon:
+                case TileSet.Trypo:
+                  context.beginPath();
+                  context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+                  context.stroke();
+                  break;
+              }
               break;
-            case 5:
-              context.beginPath();
-              context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
-              context.stroke();
+            case 5: // noodle
+              switch (tile_set) {
+                case TileSet.Ribbon:
+                case TileSet.Trypo:
+                  context.beginPath();
+                  context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
+                  context.stroke();
+                  break;
+              }
               break;
-            case 7:
-              context.beginPath();
-              context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
-              context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-              context.stroke();
+            case 7: // bird
+              switch (tile_set) {
+                case TileSet.Ribbon:
+                case TileSet.Trypo:
+                  context.beginPath();
+                  context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
+                  context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+                  context.stroke();
+                  break;
+              }
               break;
-            case 9:
-              context.beginPath();
-              context.moveTo(0.75, sqrt3 / 4);
-              context.lineTo(-0.75, -sqrt3 / 4);
-              context.stroke();
+            case 9: // stick
+              switch (tile_set) {
+                case TileSet.Ribbon:
+                case TileSet.Trypo:
+                  context.beginPath();
+                  context.moveTo(0.75, sqrt3 / 4);
+                  context.lineTo(-0.75, -sqrt3 / 4);
+                  context.stroke();
+                  break;
+              }
               break;
-            case 11:
-              context.beginPath();
-              context.arc(-1.5, sqrt3/2, 1.5, 5/3*pi, 2*pi);
-              context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-              context.stroke();
+            case 11: // right shoe
+              switch (tile_set) {
+                case TileSet.Ribbon:
+                  context.beginPath();
+                  context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+                  context.lineTo(-0.75, -sqrt3 / 4);
+                  context.stroke();
+                  break;
+                case TileSet.Trypo:
+                  context.beginPath();
+                  context.arc(-1.5, sqrt3/2, 1.5, 5/3*pi, 2*pi);
+                  context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+                  context.stroke();
+                  break;
+              }
               break;
-            case 13:
-              context.beginPath();
-              context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
-              context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
-              context.stroke();
+            case 13: // left shoe
+              switch (tile_set) {
+                case TileSet.Ribbon:
+                  context.beginPath();
+                  context.moveTo(0.75, sqrt3 / 4);
+                  context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
+                  context.stroke();
+                  break;
+                case TileSet.Trypo:
+                  context.beginPath();
+                  context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
+                  context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
+                  context.stroke();
+                  break;
+              }
               break;
-            case 15:
-              context.beginPath();
-              context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
-              context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
-              context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-              context.stroke();
+            case 15: // comb
+              switch (tile_set) {
+                case TileSet.Ribbon:
+                  context.beginPath();
+                  context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
+                  context.stroke();
+                  context.rotate(pi/3);
+                  context.beginPath();
+                  context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
+                  context.stroke();
+                  break;
+                case TileSet.Trypo:
+                  context.beginPath();
+                  context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
+                  context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
+                  context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+                  context.stroke();
+                  break;
+              }
               break;
-            case 21:
-              context.beginPath();
-              context.arc(1.5, -sqrt3/2, 1.5, 2/3*pi, pi);
-              context.arc(-1.5, -sqrt3/2, 1.5, 0, 1/3*pi);
-              context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
-              context.stroke();
+            case 21: // triangle
+              switch (tile_set) {
+                case TileSet.Ribbon:
+                case TileSet.Trypo:
+                  context.beginPath();
+                  context.arc(1.5, -sqrt3/2, 1.5, 2/3*pi, pi);
+                  context.arc(-1.5, -sqrt3/2, 1.5, 0, 1/3*pi);
+                  context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
+                  context.stroke();
+                  break;
+              }
               break;
-            case 23:
-              context.beginPath();
-              context.arc(1.5, -sqrt3/2, 1.5, 2/3*pi, pi);
-              context.arc(-1.5, -sqrt3/2, 1.5, 0, 1/3*pi);
-              context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
-              context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-              context.stroke();
+            case 23: // space ship
+              switch (tile_set) {
+                case TileSet.Ribbon:
+                  context.beginPath();
+                  context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
+                  context.stroke();
+                  context.beginPath();
+                  context.moveTo(0, sqrt3/2);
+                  context.lineTo(0, -sqrt3/2);
+                  context.stroke();
+                  break;
+                case TileSet.Trypo:
+                  context.beginPath();
+                  context.arc(1.5, -sqrt3/2, 1.5, 2/3*pi, pi);
+                  context.arc(-1.5, -sqrt3/2, 1.5, 0, 1/3*pi);
+                  context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
+                  context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+                  context.stroke();
+                  break;
+              }
               break;
-            case 27:
-              context.beginPath();
-              context.arc(-0.5, -sqrt3/2, 0.5, 0, 2/3*pi);
-              context.stroke();
-              context.beginPath();
-              context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-              context.stroke();
+            case 27: // pisces
+              switch (tile_set) {
+                case TileSet.Ribbon:
+                  context.beginPath();
+                  context.moveTo(0.75, sqrt3 / 4);
+                  context.lineTo(-0.75, -sqrt3 / 4);
+                  context.stroke();
+                  context.beginPath();
+                  context.moveTo(0, sqrt3/2);
+                  context.lineTo(0, -sqrt3/2);
+                  context.stroke();
+                  break;
+                case TileSet.Trypo:
+                  context.beginPath();
+                  context.arc(-0.5, -sqrt3/2, 0.5, 0, 2/3*pi);
+                  context.stroke();
+                  context.beginPath();
+                  context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+                  context.stroke();
+                  break;
+              }
               break;
-            case 31:
-              context.beginPath();
-              context.arc(-0.5, -sqrt3/2, 0.5, 0, 2/3*pi);
-              context.arc(-1, 0, 0.5, 5/3*pi, 7/3*pi);
-              context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
-              context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-              context.stroke();
+            case 31: // dragon
+              switch (tile_set) {
+                case TileSet.Ribbon:
+                  context.beginPath();
+                  context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
+                  context.stroke();
+                  context.rotate(pi/3);
+                  context.beginPath();
+                  context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+                  context.stroke();
+                  context.rotate(pi/3);
+                  context.beginPath();
+                  context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+                  context.stroke();
+                  context.beginPath();
+                  context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
+                  context.stroke();
+                  break;
+                case TileSet.Trypo:
+                  context.beginPath();
+                  context.arc(-0.5, -sqrt3/2, 0.5, 0, 2/3*pi);
+                  context.arc(-1, 0, 0.5, 5/3*pi, 7/3*pi);
+                  context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
+                  context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+                  context.stroke();
+                  break;
+              }
               break;
-            case 63:
-              context.beginPath();
-              context.arc(1, 0, 0.5, 2/3*pi, 4/3*pi);
-              context.arc(0.5, -sqrt3/2, 0.5, 1/3*pi, pi);
-              context.arc(-0.5, -sqrt3/2, 0.5, 0, 2/3*pi);
-              context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
-              context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
-              context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
-              context.stroke();
+            case 63: // shuriken
+              switch (tile_set) {
+                case TileSet.Ribbon:
+                  context.beginPath();
+                  context.moveTo(0.75, sqrt3 / 4);
+                  context.lineTo(-0.75, -sqrt3 / 4);
+                  context.stroke();
+                  context.beginPath();
+                  context.moveTo(0, sqrt3/2);
+                  context.lineTo(0, -sqrt3/2);
+                  context.stroke();
+                  context.beginPath();
+                  context.moveTo(0.75, -sqrt3 / 4);
+                  context.lineTo(-0.75, sqrt3 / 4);
+                  context.stroke();
+                  break;
+                case TileSet.Trypo:
+                  context.beginPath();
+                  context.arc(1, 0, 0.5, 2/3*pi, 4/3*pi);
+                  context.arc(0.5, -sqrt3/2, 0.5, 1/3*pi, pi);
+                  context.arc(-0.5, -sqrt3/2, 0.5, 0, 2/3*pi);
+                  context.arc(-1, 0, 0.5, 5/3*pi, 1/3*pi);
+                  context.arc(-0.5, sqrt3/2, 0.5, 4/3*pi, 2*pi);
+                  context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
+                  context.stroke();
+                  break;
+              }
               break;
 
             default: throw new AssertionFailure();
@@ -955,10 +1123,19 @@ class Level {
   }
 
   renderTiles(context: CanvasRenderingContext2D, color_value: number, x: number, y: number, animation_progress: number, endpoint_style: EndpointStyle): void {
-    if (!this.toroidal) return this.renderTile(context, color_value, x, y, animation_progress, endpoint_style);
+    let _tile_set = tile_set;
+    if (_tile_set === TileSet.Chaos) {
+      _tile_set = [
+        TileSet.Trypo,
+        TileSet.Ribbon,
+        TileSet.Iso,
+      ][(hashU32(x) ^ hashU32(y) ^ hashU32(level_number)) % 3];
+    }
+
+    if (!this.toroidal) return this.renderTile(context, color_value, x, y, animation_progress, endpoint_style, _tile_set);
     for (let dy of [-1, 0, 1]) {
       for (let dx of [-1, 0, 1]) {
-        this.renderTile(context, color_value, x + dx * this.tiles_per_row, y + dy * this.tiles_per_column, animation_progress, endpoint_style);
+        this.renderTile(context, color_value, x + dx * this.tiles_per_row, y + dy * this.tiles_per_column, animation_progress, endpoint_style, _tile_set);
       }
     }
   }
@@ -1244,6 +1421,10 @@ function setGameState(new_state: GameState) {
   global_alpha = 1.0;
   asdf_alpha = 1.0;
   game_state = new_state;
+
+  if (level_number > 27) {
+    tile_set_div.classList.remove("hidden");
+  }
 }
 
 function doFadeOut() {
@@ -1536,6 +1717,18 @@ function euclideanMod(numerator: number, denominator: number): number {
   if (numerator < 0) return denominator + (numerator % denominator);
   return numerator % denominator;
 }
+function hashU32(input: number): number {
+  // https://nullprogram.com/blog/2018/07/31/
+  var x = input;
+  x ^= x >> 17;
+  x *= 0xed5ad4bb;
+  x ^= x >> 11;
+  x *= 0xac4c1b51;
+  x ^= x >> 15;
+  x *= 0x31848bab;
+  x ^= x >> 14;
+  return x;
+}
 
 retry_button.addEventListener("click", function() {
   loadNewLevel();
@@ -1547,6 +1740,11 @@ reset_button.addEventListener("click", function() {
     loadNewLevel();
     hideSidebar();
   }
+});
+tile_set_select.addEventListener("input", function() {
+  tile_set = TileSet[tile_set_select.value as keyof typeof TileSet];
+  renderEverything();
+  save();
 });
 
 function getSaveObject(): {[key:string]:any} {
@@ -1577,6 +1775,7 @@ function save() {
     original_tiles: level.original_tiles,
     perfect_so_far: level.perfect_so_far,
   };
+  save_data.tile_set = tile_set_select.value;
   window.localStorage.setItem("loops", JSON.stringify(save_data));
 }
 
@@ -1584,6 +1783,9 @@ function save() {
 (function () {
   let save_data = getSaveObject();
   level_number = save_data.level_number || 1;
+
+  tile_set = TileSet[save_data.tile_set as keyof typeof TileSet] ?? TileSet.Trypo;
+  tile_set_select.value = TileSet[tile_set];
 
   function loadLevelData(): Level | null {
     // the validation in this function is limited to preserving the invariants in our code.
