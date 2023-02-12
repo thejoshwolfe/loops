@@ -13,23 +13,26 @@ https://wolfesoftware.com/loops/
 
 ## Version History
 
-#### 1.3.0:
+#### 1.4.0
+ * Unlock alternate tile sets at the end of the game.
+
+#### 1.3.0
  * The final level gives a hint that you didn't
    obviously waste clicks.
 
-#### 1.2.0:
+#### 1.2.0
  * The game state now saves and loads on page refresh,
    not just the level number (using `localStorage`).
 
-#### 1.1.0:
+#### 1.1.0
  * The end game now stays on cement-mode, single-color (2 state), hexagonal, toroidal, rough island,
    instead of looping through a tour of all the settings.
 
-#### 1.0.2:
+#### 1.0.2
  * Fix background of main game when the browser is in dark mode.
    The game always has a light-mode theme for now.
 
-#### 1.0.0:
+#### 1.0.0
  * Use version numbers
 
 #### before 1.0.0
