@@ -1129,7 +1129,7 @@ class Level {
         TileSet.Trypo,
         TileSet.Ribbon,
         TileSet.Iso,
-      ][(x + level_number + y * level_number) % 3];
+      ][(hashU32(x) ^ hashU32(y) ^ hashU32(level_number)) % 3];
     }
 
     if (!this.toroidal) return this.renderTile(context, color_value, x, y, animation_progress, endpoint_style, _tile_set);
@@ -1716,6 +1716,18 @@ function assert(b: boolean) {
 function euclideanMod(numerator: number, denominator: number): number {
   if (numerator < 0) return denominator + (numerator % denominator);
   return numerator % denominator;
+}
+function hashU32(input: number): number {
+  // https://nullprogram.com/blog/2018/07/31/
+  var x = input;
+  x ^= x >> 17;
+  x *= 0xed5ad4bb;
+  x ^= x >> 11;
+  x *= 0xac4c1b51;
+  x ^= x >> 15;
+  x *= 0x31848bab;
+  x ^= x >> 14;
+  return x;
 }
 
 retry_button.addEventListener("click", function() {
