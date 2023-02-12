@@ -1,10 +1,12 @@
 let level_number = 1;
 
 const canvas = document.getElementById("canvas")! as HTMLCanvasElement;
-const sidebar_tray = document.getElementById("sidebar")!;
-const sidebar_button = document.getElementById("hamburger")!;
-const retry_button = document.getElementById("retryButton")!;
-const reset_button = document.getElementById("resetButton")!;
+const sidebar_tray = document.getElementById("sidebar") as HTMLDivElement;
+const sidebar_button = document.getElementById("hamburger") as HTMLDivElement;
+const retry_button = document.getElementById("retryButton") as HTMLButtonElement;
+const reset_button = document.getElementById("resetButton") as HTMLButtonElement;
+const tile_set_div = document.getElementById("tileSetDiv") as HTMLDivElement;
+const tile_set_select = document.getElementById("tileSetSelect") as HTMLSelectElement;
 
 const pi = Math.PI;
 const sqrt3 = Math.sqrt(3);
@@ -40,6 +42,14 @@ enum GameState {
   FadeIn,
 }
 let game_state = GameState.Playing;
+
+// Aesthetics
+enum TileSet {
+  Trypo,
+  Ribbon,
+  Iso,
+}
+let tile_set: TileSet = TileSet.Trypo;
 
 enum Shape {
   // for Square, tile values are a bit for each edge:
@@ -80,12 +90,6 @@ enum EndpointStyle {
   LargeRing,
   SmallRing,
   LargeDot,
-}
-
-enum TileSet {
-  Trypo,
-  Ribbon,
-  Iso,
 }
 
 type Coord = {x:number, y:number};
@@ -130,9 +134,6 @@ class Level {
   recent_touch_queue: number[];
   original_tiles?: number[][];
   perfect_so_far: boolean;
-
-  // Aesthetics
-  tile_set: TileSet;
 
   constructor(parameters: LevelParameters) {
     this.tiles_per_row = parameters.size[0];
@@ -217,8 +218,6 @@ class Level {
 
     // TODO: odd width wrapping for hexagons is not trivial, and doesn't work yet.
     assert(!(this.shape == Shape.Hexagon && (this.tiles_per_row & 1) && this.toroidal));
-
-    this.tile_set = TileSet.Iso;
   }
 
   initializePossibilityForPerfect(): void {
@@ -572,7 +571,7 @@ class Level {
             context.rotate(pi/3 * animation_progress);
           }
 
-          if (this.tile_set === TileSet.Iso) {
+          if (tile_set === TileSet.Iso) {
             for (let i = 0; i < 6; i++) {
               if (color_value & (1 << i)) {
                 context.beginPath();
@@ -681,7 +680,7 @@ class Level {
           // render normalized value
           switch (color_value) {
             case 1: // hoop
-              switch (this.tile_set) {
+              switch (tile_set) {
                 case TileSet.Ribbon:
                 case TileSet.Trypo:
                   context.rotate(pi/6);
@@ -714,7 +713,7 @@ class Level {
               }
               break;
             case 3: // hook
-              switch (this.tile_set) {
+              switch (tile_set) {
                 case TileSet.Ribbon:
                 case TileSet.Trypo:
                   context.beginPath();
@@ -724,7 +723,7 @@ class Level {
               }
               break;
             case 5: // noodle
-              switch (this.tile_set) {
+              switch (tile_set) {
                 case TileSet.Ribbon:
                 case TileSet.Trypo:
                   context.beginPath();
@@ -734,7 +733,7 @@ class Level {
               }
               break;
             case 7: // bird
-              switch (this.tile_set) {
+              switch (tile_set) {
                 case TileSet.Ribbon:
                 case TileSet.Trypo:
                   context.beginPath();
@@ -745,7 +744,7 @@ class Level {
               }
               break;
             case 9: // stick
-              switch (this.tile_set) {
+              switch (tile_set) {
                 case TileSet.Ribbon:
                 case TileSet.Trypo:
                   context.beginPath();
@@ -756,7 +755,7 @@ class Level {
               }
               break;
             case 11: // right shoe
-              switch (this.tile_set) {
+              switch (tile_set) {
                 case TileSet.Ribbon:
                   context.beginPath();
                   context.arc(0.5, sqrt3/2, 0.5, pi, 5/3*pi);
@@ -772,7 +771,7 @@ class Level {
               }
               break;
             case 13: // left shoe
-              switch (this.tile_set) {
+              switch (tile_set) {
                 case TileSet.Ribbon:
                   context.beginPath();
                   context.moveTo(0.75, sqrt3 / 4);
@@ -788,7 +787,7 @@ class Level {
               }
               break;
             case 15: // comb
-              switch (this.tile_set) {
+              switch (tile_set) {
                 case TileSet.Ribbon:
                   context.beginPath();
                   context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
@@ -808,7 +807,7 @@ class Level {
               }
               break;
             case 21: // triangle
-              switch (this.tile_set) {
+              switch (tile_set) {
                 case TileSet.Ribbon:
                 case TileSet.Trypo:
                   context.beginPath();
@@ -820,7 +819,7 @@ class Level {
               }
               break;
             case 23: // space ship
-              switch (this.tile_set) {
+              switch (tile_set) {
                 case TileSet.Ribbon:
                   context.beginPath();
                   context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
@@ -841,7 +840,7 @@ class Level {
               }
               break;
             case 27: // pisces
-              switch (this.tile_set) {
+              switch (tile_set) {
                 case TileSet.Ribbon:
                   context.beginPath();
                   context.moveTo(0.75, sqrt3 / 4);
@@ -863,7 +862,7 @@ class Level {
               }
               break;
             case 31: // dragon
-              switch (this.tile_set) {
+              switch (tile_set) {
                 case TileSet.Ribbon:
                   context.beginPath();
                   context.arc(0, sqrt3, 1.5, 4/3*pi, 5/3*pi);
@@ -891,7 +890,7 @@ class Level {
               }
               break;
             case 63: // shuriken
-              switch (this.tile_set) {
+              switch (tile_set) {
                 case TileSet.Ribbon:
                   context.beginPath();
                   context.moveTo(0.75, sqrt3 / 4);
@@ -1412,6 +1411,10 @@ function setGameState(new_state: GameState) {
   global_alpha = 1.0;
   asdf_alpha = 1.0;
   game_state = new_state;
+
+  if (level_number > 27) {
+    tile_set_div.classList.remove("hidden");
+  }
 }
 
 function doFadeOut() {
@@ -1716,6 +1719,11 @@ reset_button.addEventListener("click", function() {
     hideSidebar();
   }
 });
+tile_set_select.addEventListener("input", function() {
+  tile_set = TileSet[tile_set_select.value as keyof typeof TileSet];
+  renderEverything();
+  save();
+});
 
 function getSaveObject(): {[key:string]:any} {
   let save_data_str = window.localStorage.getItem("loops");
@@ -1745,6 +1753,7 @@ function save() {
     original_tiles: level.original_tiles,
     perfect_so_far: level.perfect_so_far,
   };
+  save_data.tile_set = tile_set_select.value;
   window.localStorage.setItem("loops", JSON.stringify(save_data));
 }
 
@@ -1752,6 +1761,9 @@ function save() {
 (function () {
   let save_data = getSaveObject();
   level_number = save_data.level_number || 1;
+
+  tile_set = TileSet[save_data.tile_set as keyof typeof TileSet] ?? TileSet.Trypo;
+  tile_set_select.value = TileSet[tile_set];
 
   function loadLevelData(): Level | null {
     // the validation in this function is limited to preserving the invariants in our code.
