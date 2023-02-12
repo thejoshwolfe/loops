@@ -48,6 +48,7 @@ enum TileSet {
   Trypo,
   Ribbon,
   Iso,
+  Chaos,
 }
 let tile_set: TileSet = TileSet.Trypo;
 
@@ -459,7 +460,7 @@ class Level {
     }
   }
 
-  renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number, animation_progress: number, endpoint_style: EndpointStyle): void {
+  renderTile(context: CanvasRenderingContext2D, color_value: number, x: number, y: number, animation_progress: number, endpoint_style: EndpointStyle, tile_set: TileSet): void {
     switch (this.shape) {
       case Shape.Square: {
         if (color_value === 0) return;
@@ -1122,10 +1123,19 @@ class Level {
   }
 
   renderTiles(context: CanvasRenderingContext2D, color_value: number, x: number, y: number, animation_progress: number, endpoint_style: EndpointStyle): void {
-    if (!this.toroidal) return this.renderTile(context, color_value, x, y, animation_progress, endpoint_style);
+    let _tile_set = tile_set;
+    if (_tile_set === TileSet.Chaos) {
+      _tile_set = [
+        TileSet.Trypo,
+        TileSet.Ribbon,
+        TileSet.Iso,
+      ][(x + level_number + y * level_number) % 3];
+    }
+
+    if (!this.toroidal) return this.renderTile(context, color_value, x, y, animation_progress, endpoint_style, _tile_set);
     for (let dy of [-1, 0, 1]) {
       for (let dx of [-1, 0, 1]) {
-        this.renderTile(context, color_value, x + dx * this.tiles_per_row, y + dy * this.tiles_per_column, animation_progress, endpoint_style);
+        this.renderTile(context, color_value, x + dx * this.tiles_per_row, y + dy * this.tiles_per_column, animation_progress, endpoint_style, _tile_set);
       }
     }
   }
