@@ -14,28 +14,47 @@ https://wolfesoftware.com/loops/
 ## Version History
 
 #### 1.4.0
+
+2023-Feb-11
+
  * Unlock alternate tile sets at the end of the game.
 
 #### 1.3.0
+
+2020-May-03
+
  * The final level gives a hint that you didn't
    obviously waste clicks.
 
 #### 1.2.0
+
+2019-Sep-21
+
  * The game state now saves and loads on page refresh,
    not just the level number (using `localStorage`).
 
 #### 1.1.0
+
+2019-Sep-20
+
  * The end game now stays on cement-mode, single-color (2 state), hexagonal, toroidal, rough island,
    instead of looping through a tour of all the settings.
 
 #### 1.0.2
+
+2019-Sep-20
+
  * Fix background of main game when the browser is in dark mode.
    The game always has a light-mode theme for now.
 
 #### 1.0.0
+
+2019-Sep-20
+
  * Use version numbers
 
 #### before 1.0.0
+
  * Square tiling
  * Hex tiling
  * One color (2 possible states per edge)
@@ -57,7 +76,7 @@ Dependencies:
 
 In NixOS:
 
-* `nix-shell --pure --pure -p nodejs -p python3 -p s3cmd`
+* `nix-shell --pure -p nodejs -p python3 -p s3cmd`
 
 To build:
 
@@ -72,5 +91,5 @@ npm install
 To serve on http://localhost:8000/ :
 
 ```
-(cd public && python3 -m http.server)
+python3 -m http.server -d public/
 ```
