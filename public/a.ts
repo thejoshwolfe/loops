@@ -10,6 +10,14 @@ const tile_set_select = document.getElementById("tileSetSelect") as HTMLSelectEl
 const level_number_span = document.getElementById("level_number_span") as HTMLSpanElement;
 const level_down_button = document.getElementById("level_down_button") as HTMLButtonElement;
 const level_up_button = document.getElementById("level_up_button") as HTMLButtonElement;
+const show_custom_level_button = document.getElementById("show_custom_level_button") as HTMLButtonElement;
+const level_settings_div = document.getElementById("level_settings_div") as HTMLDivElement;
+const custom_shape_select = document.getElementById("custom_shape_select") as HTMLSelectElement;
+const custom_toroidal_checkbox = document.getElementById("custom_toroidal_checkbox") as HTMLInputElement;
+const custom_rough_checkbox = document.getElementById("custom_rough_checkbox") as HTMLInputElement;
+const custom_cement_mode_checkbox = document.getElementById("custom_cement_mode_checkbox") as HTMLInputElement;
+const custom_width_spinner = document.getElementById("custom_width_spinner") as HTMLInputElement;
+const custom_height_spinner = document.getElementById("custom_height_spinner") as HTMLInputElement;
 
 const pi = Math.PI;
 const sqrt3 = Math.sqrt(3);
@@ -1438,6 +1446,19 @@ function renderLevelInfoInSidebar() {
     level_number_span.innerText = level_number.toString();
     level_up_button.disabled = false;
   }
+  custom_shape_select.value = Shape[level.shape];
+  custom_toroidal_checkbox.checked = level.toroidal;
+  custom_rough_checkbox.checked = level.rough;
+  custom_cement_mode_checkbox.checked = level.cement_mode;
+  let width = level.tiles_per_row;
+  let height = level.tiles_per_column;
+  if (!level.toroidal) {
+    // Present the size without the border of padding.
+    width -= 2;
+    height -= 2;
+  }
+  custom_width_spinner.value = width as unknown as string;
+  custom_height_spinner.value = height as unknown as string;
 }
 
 function doFadeOut() {
@@ -1769,6 +1790,10 @@ level_down_button.addEventListener("click", function() {
 });
 level_up_button.addEventListener("click", function() {
   loadNewLevel({delta: 1});
+});
+show_custom_level_button.addEventListener("click", function() {
+  level_settings_div.classList.toggle("hidden");
+  show_custom_level_button.innerText = ( level_settings_div.classList.contains("hidden") ? ">" : "v" )+ " Custom Level";
 });
 
 function getSaveObject(): {[key:string]:any} {
