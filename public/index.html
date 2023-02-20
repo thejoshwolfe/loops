@@ -65,6 +65,9 @@
       #sidebar > div {
         margin: 12px 0px;
       }
+      #level_settings_div {
+        padding-left: 12px;
+      }
 
       input[type=number] {
         width: 2em;
@@ -92,14 +95,19 @@
       </div>
       <button id="show_custom_level_button">&gt; Custom Level</button>
       <div id="level_settings_div" class="hidden">
+        <div>Colors: <select id="custom_colors_select">
+          <option value="Single">Single</option>
+          <option value="TwoSeparate">Double</option>
+          <option value="TwoOverlap">Overlap</option>
+        </select></div>
         <div>Shape: <select id="custom_shape_select">
           <option value="Square">Square</option>
           <option value="Hexagon">Hexagon</option>
         </select></div>
         <div><label><input type="checkbox" id="custom_toroidal_checkbox"> Wrapping</label></div>
-        <div><label><input type="checkbox" id="custom_rough_checkbox"> Rough Edges</label></div>
+        <div><label><input type="checkbox" id="custom_rough_checkbox"> <span id="rough_label_span">Rough Edges</span></label></div>
         <div><label><input type="checkbox" id="custom_cement_mode_checkbox"> Lock Tiles</label></div>
-        <div>Size: <input type="number" id="custom_width_spinner">x<input type="number" id="custom_height_spinner"></div>
+        <div>Size: <input type="number" min=1 max=20 id="custom_width_spinner">x<input type="number" min=1 max=20 id="custom_height_spinner"></div>
       </div>
       <div id="tileSetDiv" class="hidden">
         Tile Set:

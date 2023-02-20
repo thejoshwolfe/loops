@@ -12,9 +12,11 @@ const level_down_button = document.getElementById("level_down_button") as HTMLBu
 const level_up_button = document.getElementById("level_up_button") as HTMLButtonElement;
 const show_custom_level_button = document.getElementById("show_custom_level_button") as HTMLButtonElement;
 const level_settings_div = document.getElementById("level_settings_div") as HTMLDivElement;
+const custom_colors_select = document.getElementById("custom_colors_select") as HTMLSelectElement;
 const custom_shape_select = document.getElementById("custom_shape_select") as HTMLSelectElement;
 const custom_toroidal_checkbox = document.getElementById("custom_toroidal_checkbox") as HTMLInputElement;
 const custom_rough_checkbox = document.getElementById("custom_rough_checkbox") as HTMLInputElement;
+const rough_label_span = document.getElementById("rough_label_span") as HTMLSpanElement;
 const custom_cement_mode_checkbox = document.getElementById("custom_cement_mode_checkbox") as HTMLInputElement;
 const custom_width_spinner = document.getElementById("custom_width_spinner") as HTMLInputElement;
 const custom_height_spinner = document.getElementById("custom_height_spinner") as HTMLInputElement;
@@ -124,8 +126,7 @@ class Level {
   tiles_per_column: number;
   shape: Shape;
   cement_mode: boolean;
-  color_count: number;
-  allow_overlap: boolean;
+  colors: ColorRules;
   toroidal: boolean;
   rough: boolean;
 
@@ -134,6 +135,8 @@ class Level {
   units_per_tile_y: number;
   tile_animation_time: number;
   edges_per_tile: number;
+  color_count: number;
+  allow_overlap: boolean;
 
   display_offset_x: number;
   display_offset_y: number;
@@ -156,6 +159,7 @@ class Level {
     this.rough = parameters.rough || false;
     this.perfect_so_far = false;
 
+    this.colors = parameters.colors;
     switch (parameters.colors) {
       case ColorRules.Single:
         this.color_count = 1;
@@ -1446,6 +1450,7 @@ function renderLevelInfoInSidebar() {
     level_number_span.innerText = level_number.toString();
     level_up_button.disabled = false;
   }
+  custom_colors_select.value = ColorRules[level.colors];
   custom_shape_select.value = Shape[level.shape];
   custom_toroidal_checkbox.checked = level.toroidal;
   custom_rough_checkbox.checked = level.rough;
@@ -1457,8 +1462,56 @@ function renderLevelInfoInSidebar() {
     width -= 2;
     height -= 2;
   }
-  custom_width_spinner.value = width as unknown as string;
-  custom_height_spinner.value = height as unknown as string;
+  custom_width_spinner.value = width.toString();
+  custom_height_spinner.value = height.toString();
+  adjustSpinnerRules();
+}
+function handleCustomLevelEdited() {
+  const parameters: LevelParameters = {
+    size: [
+      clamp(2, parseInt(custom_width_spinner.value, 10), 20),
+      clamp(2, parseInt(custom_height_spinner.value, 10), 20),
+    ],
+    shape: Shape[custom_shape_select.value as keyof typeof Shape],
+    colors: ColorRules[custom_colors_select.value as keyof typeof ColorRules],
+    toroidal: custom_toroidal_checkbox.checked,
+    cement_mode: custom_cement_mode_checkbox.checked,
+    rough: custom_rough_checkbox.checked,
+  };
+
+  if (parameters.shape === Shape.Hexagon && parameters.toroidal) {
+    // Only even sizes work for this.
+    if (parameters.size[0] % 2 === 1) {
+      parameters.size[0] += 1;
+    }
+    if (parameters.size[1] % 2 === 1) {
+      parameters.size[1] += 1;
+    }
+  }
+
+  if (!parameters.toroidal) {
+    // UI shows non-padding size
+    parameters.size[0] += 2;
+    parameters.size[1] += 2;
+  }
+
+  setCurrentLevel(generateLevel(parameters));
+  adjustSpinnerRules();
+}
+function adjustSpinnerRules() {
+  if (level.shape === Shape.Hexagon && level.toroidal) {
+    // Prevent the user from getting into the broken combination.
+    custom_width_spinner.min = "2";
+    custom_width_spinner.step = "2";
+    custom_height_spinner.min = "2";
+    custom_height_spinner.step = "2";
+  } else {
+    custom_width_spinner.step = "1";
+    custom_width_spinner.min = "1";
+    custom_height_spinner.step = "1";
+    custom_height_spinner.min = "1";
+  }
+  rough_label_span.innerText = level.toroidal ? "Locked Island" : "Rough Edges";
 }
 
 function doFadeOut() {
@@ -1548,7 +1601,10 @@ function loadNewLevel(opts?: {delta?: number, shuffle_tiles?: boolean}) {
   if (opts?.delta != null) {
     level_number += opts.delta;
   }
-  level = getLevelForCurrentLevelNumber(opts?.shuffle_tiles ?? true);
+  setCurrentLevel(getLevelForCurrentLevelNumber(opts?.shuffle_tiles ?? true));
+}
+function setCurrentLevel(new_level: Level) {
+  level = new_level;
   line_width_multiplier = 1.0;
   save();
 
@@ -1731,7 +1787,7 @@ function generateLevel(parameters: LevelParameters, tiles?: number[][]): Level {
     }
 
     // rotate the tiles randomly
-    if (parameters.shuffle_tiles) {
+    if (parameters.shuffle_tiles ?? true) {
       for (let tile_index of level.allTileIndexes()) {
         if (!level.frozen_tiles[tile_index]) {
           level.rotateRandomly(tile_index);
@@ -1767,6 +1823,11 @@ function hashU32(input: number): number {
   x ^= x >> 14;
   return x;
 }
+function clamp(min: number, x: number, max: number): number {
+  if (x < min) return min;
+  if (x > max) return max;
+  return x;
+}
 
 retry_button.addEventListener("click", function() {
   loadNewLevel();
@@ -1795,6 +1856,13 @@ show_custom_level_button.addEventListener("click", function() {
   level_settings_div.classList.toggle("hidden");
   show_custom_level_button.innerText = ( level_settings_div.classList.contains("hidden") ? ">" : "v" )+ " Custom Level";
 });
+custom_colors_select.addEventListener("input", handleCustomLevelEdited);
+custom_shape_select.addEventListener("input", handleCustomLevelEdited);
+custom_toroidal_checkbox.addEventListener("change", handleCustomLevelEdited);
+custom_rough_checkbox.addEventListener("change", handleCustomLevelEdited);
+custom_cement_mode_checkbox.addEventListener("change", handleCustomLevelEdited);
+custom_width_spinner.addEventListener("input", handleCustomLevelEdited);
+custom_height_spinner.addEventListener("input", handleCustomLevelEdited);
 
 function getSaveObject(): {[key:string]:any} {
   let save_data_str = window.localStorage.getItem("loops");
