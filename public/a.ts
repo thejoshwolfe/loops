@@ -7,6 +7,9 @@ const retry_button = document.getElementById("retryButton") as HTMLButtonElement
 const reset_button = document.getElementById("resetButton") as HTMLButtonElement;
 const tile_set_div = document.getElementById("tileSetDiv") as HTMLDivElement;
 const tile_set_select = document.getElementById("tileSetSelect") as HTMLSelectElement;
+const level_number_span = document.getElementById("level_number_span") as HTMLSpanElement;
+const level_down_button = document.getElementById("level_down_button") as HTMLButtonElement;
+const level_up_button = document.getElementById("level_up_button") as HTMLButtonElement;
 
 const pi = Math.PI;
 const sqrt3 = Math.sqrt(3);
@@ -1422,8 +1425,18 @@ function setGameState(new_state: GameState) {
   asdf_alpha = 1.0;
   game_state = new_state;
 
-  if (level_number > 27) {
+  renderLevelInfoInSidebar();
+}
+
+function renderLevelInfoInSidebar() {
+  level_down_button.disabled = level_number <= 1;
+  if (level_number >= last_level_number) {
+    level_number_span.innerText = last_level_number + "+";
     tile_set_div.classList.remove("hidden");
+    level_up_button.disabled = true;
+  } else {
+    level_number_span.innerText = level_number.toString();
+    level_up_button.disabled = false;
   }
 }
 
@@ -1524,6 +1537,8 @@ function loadNewLevel(opts?: {delta?: number, shuffle_tiles?: boolean}) {
 }
 function getLevelForCurrentLevelNumber(shuffle_tiles: boolean): Level {
   if (level_number < 1) level_number = 1;
+  if (level_number > last_level_number) level_number = last_level_number;
+  if (!Number.isInteger(level_number)) level_number = 1;
 
   switch (level_number) {
     case 1:
@@ -1601,15 +1616,17 @@ function getLevelForCurrentLevelNumber(shuffle_tiles: boolean): Level {
         return {size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.TwoSeparate, toroidal: true, rough: true};
       case 27:
         return {size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.Single, toroidal: true, rough: true};
-      default:
+      case last_level_number:
         // the final challenge
         return {size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.Single, cement_mode: true, toroidal: true, rough: true, perfectable: true};
+      default: throw new AssertionFailure();
     }
   }();
 
   params.shuffle_tiles = shuffle_tiles;
   return generateLevel(params);
 }
+const last_level_number = 28;
 
 function oneColor(values: number[]): number[][] {
   let result = [];
@@ -1745,6 +1762,13 @@ tile_set_select.addEventListener("input", function() {
   tile_set = TileSet[tile_set_select.value as keyof typeof TileSet];
   renderEverything();
   save();
+});
+
+level_down_button.addEventListener("click", function() {
+  loadNewLevel({delta: -1});
+});
+level_up_button.addEventListener("click", function() {
+  loadNewLevel({delta: 1});
 });
 
 function getSaveObject(): {[key:string]:any} {

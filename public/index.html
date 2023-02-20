@@ -51,7 +51,7 @@
         top: 0px;
         left: -275px;
         width: 275px;
-        padding: 20px 0px;
+        padding: 50px 0px 0px 12px;
         height: 100%;
         background-color: #f6f6f6;
         color: #343838;
@@ -61,6 +61,10 @@
       }
       /* slide in */
       #sidebar.active { left: 0px; }
+
+      #sidebar > div {
+        margin: 12px 0px;
+      }
 
       .hidden {
         display: none !important;
@@ -76,11 +80,12 @@
       <div id="bottom"></div>
     </div>
     <div id="sidebar">
-      <div>&nbsp;</div>
       <div><button id="retryButton">Retry Level</button></div>
-      <div>&nbsp;</div>
-      <div><button id="resetButton">Erase Progress</button></div>
-      <div>&nbsp;</div>
+      <div>Level:
+        <button id="level_down_button">&lt;</button>
+        <span id="level_number_span">1</span>
+        <button id="level_up_button">&gt;</button>
+      </div>
       <div id="tileSetDiv" class="hidden">
         Tile Set:
         <select id="tileSetSelect">
@@ -89,12 +94,15 @@
           <option value="Iso">Iso</option>
           <option value="Chaos">Chaos</option>
         </select>
-        <div>&nbsp;</div>
       </div>
       <div>&nbsp;</div>
-      <div>Version 1.4.0</div>
-      <div>* <a href="https://github.com/thejoshwolfe/loops/blob/master/README.md">what's new</a></div>
-      <div>* <a href="https://github.com/thejoshwolfe/loops">source code</a></div>
+      <div><button id="resetButton">Erase Progress</button></div>
+      <div>Version 1.4.0
+        <ul>
+          <li>* <a href="https://github.com/thejoshwolfe/loops/blob/master/README.md">what's new</a></li>
+          <li>* <a href="https://github.com/thejoshwolfe/loops">source code</a></li>
+        </ul>
+      </div>
     </div>
 
     <script src="a.js"></script>
