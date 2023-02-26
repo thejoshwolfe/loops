@@ -14,11 +14,17 @@ const level_up_button = document.getElementById("level_up_button") as HTMLButton
 const show_custom_level_button = document.getElementById("show_custom_level_button") as HTMLButtonElement;
 const level_settings_div = document.getElementById("level_settings_div") as HTMLDivElement;
 const custom_colors_select = document.getElementById("custom_colors_select") as HTMLSelectElement;
+const custom_colors_div = document.getElementById("custom_colors_div") as HTMLDivElement;
+const custom_color_two_overlap_option = document.getElementById("custom_color_two_overlap_option") as HTMLOptionElement;
 const custom_shape_select = document.getElementById("custom_shape_select") as HTMLSelectElement;
+const custom_shape_div = document.getElementById("custom_shape_div") as HTMLDivElement;
 const custom_toroidal_checkbox = document.getElementById("custom_toroidal_checkbox") as HTMLInputElement;
+const custom_toroidal_div = document.getElementById("custom_toroidal_div") as HTMLDivElement;
 const custom_rough_checkbox = document.getElementById("custom_rough_checkbox") as HTMLInputElement;
+const custom_rough_div = document.getElementById("custom_rough_div") as HTMLDivElement;
 const rough_label_span = document.getElementById("rough_label_span") as HTMLSpanElement;
 const custom_cement_mode_checkbox = document.getElementById("custom_cement_mode_checkbox") as HTMLInputElement;
+const custom_cement_mode_div = document.getElementById("custom_cement_mode_div") as HTMLDivElement;
 const custom_width_spinner = document.getElementById("custom_width_spinner") as HTMLInputElement;
 const custom_height_spinner = document.getElementById("custom_height_spinner") as HTMLInputElement;
 
@@ -1465,10 +1471,16 @@ function renderLevelInfoInSidebar() {
     level_up_button.disabled = false;
   }
   custom_colors_select.value = ColorRules[level.colors];
+  setElementVisible(custom_colors_div, unlocked_level_number >= 10);
+  setElementVisible(custom_color_two_overlap_option, unlocked_level_number >= 14);
   custom_shape_select.value = Shape[level.shape];
+  setElementVisible(custom_shape_div, unlocked_level_number >= 6);
   custom_toroidal_checkbox.checked = level.toroidal;
+  setElementVisible(custom_toroidal_div, unlocked_level_number >= 16);
   custom_rough_checkbox.checked = level.rough;
+  setElementVisible(custom_rough_div, unlocked_level_number >= 11);
   custom_cement_mode_checkbox.checked = level.cement_mode;
+  setElementVisible(custom_cement_mode_div, unlocked_level_number >= 22);
   let width = level.tiles_per_row;
   let height = level.tiles_per_column;
   if (!level.toroidal) {
@@ -1844,6 +1856,14 @@ function clamp(min: number, x: number, max: number): number {
   return x;
 }
 
+function setElementVisible(element: HTMLElement, isVisible: boolean) {
+  if (isVisible) {
+    element.classList.remove("hidden");
+  } else {
+    element.classList.add("hidden");
+  }
+}
+
 retry_button.addEventListener("click", function() {
   loadNewLevel();
   hideSidebar();
@@ -1917,15 +1937,15 @@ function save() {
     // Version 1.5+
     unlocked_level_number = save_data.unlocked_level_number;
   } else {
-    // Version 1.5, swapped levels 16-21 with levels 22-27.
-    // This swapped the introduction of toroidal topology and cement mode
-    // to make cement mode show up later.
+    // The upgrade to version 1.5 swapped levels 16-21 with levels 22-27
+    // to introduce toroidal topology before cement mode.
     if (16 <= level_number && level_number <= 27) {
-      // Sry fam.
+      // Sorry buddy.
       alert(
         `New version of Loops released! Levels 16-27 have been updated, ` +
         `so your progress through level ${level_number} unfortunately cannot be loaded. :( ` +
-        `You've been set back to level 16. Please enjoy the new sequence of levels! :)`
+        `You've been set back to level 16. Please enjoy the new sequence of levels! ` +
+        `(And don't forget to check the sidebar for cool new stuff!) :)`
       );
       level_number = 16;
       delete save_data.level;
