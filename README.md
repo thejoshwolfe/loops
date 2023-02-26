@@ -13,6 +13,16 @@ https://wolfesoftware.com/loops/
 
 ## Version History
 
+#### 1.5.0
+
+* Swap levels 16-21 with 22-27 to introduce toroidal topology before cement mode.
+* Custom level mode available in the sidebar.
+    * Allows you to turn off cement mode.
+    * Allows extreme sized levels.
+    * Allows toroidal topology without a starter island.
+    * Does not allow toroidal topology with odd sizes.
+* Level select available in the side bar to revisit previous levels.
+
 #### 1.4.0
 
 2023-Feb-11

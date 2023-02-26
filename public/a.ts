@@ -1,4 +1,5 @@
 let level_number = 1;
+let unlocked_level_number = 1;
 
 const canvas = document.getElementById("canvas")! as HTMLCanvasElement;
 const sidebar_tray = document.getElementById("sidebar") as HTMLDivElement;
@@ -1422,6 +1423,12 @@ function checkForDone() {
   const unsolved_count = level.countUnsolved();
   if (unsolved_count > 0) return;
 
+  if (unlocked_level_number <= level_number) {
+    // Unlock the next level (in case you want to hit the next level button
+    // in the menu instead of smelling the roses).
+    unlocked_level_number = level_number + 1;
+  }
+
   // everything is done
   doFadeToRoses();
 }
@@ -1437,6 +1444,10 @@ function setGameState(new_state: GameState) {
   asdf_alpha = 1.0;
   game_state = new_state;
 
+  if (unlocked_level_number < level_number) {
+    // Cheatcodes can get us here.
+    unlocked_level_number = level_number;
+  }
   renderLevelInfoInSidebar();
 }
 
@@ -1445,6 +1456,9 @@ function renderLevelInfoInSidebar() {
   if (level_number >= last_level_number) {
     level_number_span.innerText = last_level_number + "+";
     tile_set_div.classList.remove("hidden");
+    level_up_button.disabled = true;
+  } else if (level_number >= unlocked_level_number) {
+    level_number_span.innerText = level_number.toString();
     level_up_button.disabled = true;
   } else {
     level_number_span.innerText = level_number.toString();
@@ -1469,8 +1483,8 @@ function renderLevelInfoInSidebar() {
 function handleCustomLevelEdited() {
   const parameters: LevelParameters = {
     size: [
-      clamp(2, parseInt(custom_width_spinner.value, 10), 20),
-      clamp(2, parseInt(custom_height_spinner.value, 10), 20),
+      clamp(1, parseInt(custom_width_spinner.value, 10), 20),
+      clamp(1, parseInt(custom_height_spinner.value, 10), 20),
     ],
     shape: Shape[custom_shape_select.value as keyof typeof Shape],
     colors: ColorRules[custom_colors_select.value as keyof typeof ColorRules],
@@ -1669,30 +1683,31 @@ function getLevelForCurrentLevelNumber(shuffle_tiles: boolean): Level {
         return {size:[8, 8], shape: Shape.Hexagon, colors: ColorRules.TwoOverlap, rough: true};
 
       case 16:
-        return {size:[10, 10], shape: Shape.Square, colors: ColorRules.TwoOverlap, cement_mode: true, rough: true};
+        return {size:[6, 6], shape: Shape.Square, colors: ColorRules.TwoOverlap, toroidal: true, rough: true};
       case 17:
-        return {size:[9, 9], shape: Shape.Hexagon, colors: ColorRules.TwoOverlap, cement_mode: true, rough: true};
+        return {size:[6, 6], shape: Shape.Square, colors: ColorRules.TwoSeparate, toroidal: true, rough: true};
       case 18:
-        return {size:[10, 10], shape: Shape.Square, colors: ColorRules.TwoSeparate, cement_mode: true, rough: true};
+        return {size:[6, 6], shape: Shape.Square, colors: ColorRules.Single, toroidal: true, rough: true};
       case 19:
-        return {size:[9, 9], shape: Shape.Hexagon, colors: ColorRules.TwoSeparate, cement_mode: true, rough: true};
+        return {size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.TwoOverlap, toroidal: true, rough: true};
       case 20:
-        return {size:[10, 10], shape: Shape.Square, colors: ColorRules.Single, cement_mode: true, rough: true};
+        return {size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.TwoSeparate, toroidal: true, rough: true};
       case 21:
-        return {size:[9, 9], shape: Shape.Hexagon, colors: ColorRules.Single, cement_mode: true, rough: true};
+        return {size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.Single, toroidal: true, rough: true};
 
       case 22:
-        return {size:[6, 6], shape: Shape.Square, colors: ColorRules.TwoOverlap, toroidal: true, rough: true};
+        return {size:[10, 10], shape: Shape.Square, colors: ColorRules.TwoOverlap, cement_mode: true, rough: true};
       case 23:
-        return {size:[6, 6], shape: Shape.Square, colors: ColorRules.TwoSeparate, toroidal: true, rough: true};
+        return {size:[9, 9], shape: Shape.Hexagon, colors: ColorRules.TwoOverlap, cement_mode: true, rough: true};
       case 24:
-        return {size:[6, 6], shape: Shape.Square, colors: ColorRules.Single, toroidal: true, rough: true};
+        return {size:[10, 10], shape: Shape.Square, colors: ColorRules.TwoSeparate, cement_mode: true, rough: true};
       case 25:
-        return {size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.TwoOverlap, toroidal: true, rough: true};
+        return {size:[9, 9], shape: Shape.Hexagon, colors: ColorRules.TwoSeparate, cement_mode: true, rough: true};
       case 26:
-        return {size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.TwoSeparate, toroidal: true, rough: true};
+        return {size:[10, 10], shape: Shape.Square, colors: ColorRules.Single, cement_mode: true, rough: true};
       case 27:
-        return {size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.Single, toroidal: true, rough: true};
+        return {size:[9, 9], shape: Shape.Hexagon, colors: ColorRules.Single, cement_mode: true, rough: true};
+
       case last_level_number:
         // the final challenge
         return {size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.Single, cement_mode: true, toroidal: true, rough: true, perfectable: true};
@@ -1836,6 +1851,7 @@ retry_button.addEventListener("click", function() {
 reset_button.addEventListener("click", function() {
   if (confirm("Really start back at level 1?")) {
     level_number = 1;
+    unlocked_level_number = 1;
     loadNewLevel();
     hideSidebar();
   }
@@ -1872,15 +1888,12 @@ function save() {
   // preserve any unknown properties
   let save_data = getSaveObject();
   save_data.level_number = level_number;
+  save_data.unlocked_level_number = unlocked_level_number;
   save_data.level = {
     // level parameters
     size: [level.tiles_per_row, level.tiles_per_column],
     shape: level.shape,
-    colors: (
-      level.color_count === 1 ? ColorRules.Single :
-      level.allow_overlap ? ColorRules.TwoOverlap :
-      ColorRules.TwoSeparate
-    ),
+    colors: level.colors,
     cement_mode: level.cement_mode,
     toroidal: level.toroidal,
     rough: level.rough,
@@ -1900,6 +1913,25 @@ function save() {
 (function () {
   let save_data = getSaveObject();
   level_number = save_data.level_number || 1;
+  if (save_data.unlocked_level_number != null) {
+    // Version 1.5+
+    unlocked_level_number = save_data.unlocked_level_number;
+  } else {
+    // Version 1.5, swapped levels 16-21 with levels 22-27.
+    // This swapped the introduction of toroidal topology and cement mode
+    // to make cement mode show up later.
+    if (16 <= level_number && level_number <= 27) {
+      // Sry fam.
+      alert(
+        `New version of Loops released! Levels 16-27 have been updated, ` +
+        `so your progress through level ${level_number} unfortunately cannot be loaded. :( ` +
+        `You've been set back to level 16. Please enjoy the new sequence of levels! :)`
+      );
+      level_number = 16;
+      delete save_data.level;
+    }
+    unlocked_level_number = level_number;
+  }
 
   tile_set = TileSet[save_data.tile_set as keyof typeof TileSet] ?? TileSet.Trypo;
   tile_set_select.value = TileSet[tile_set];
