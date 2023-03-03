@@ -15,12 +15,15 @@ https://wolfesoftware.com/loops/
 
 #### 1.5.0
 
-* Swap levels 16-21 with 22-27 to introduce toroidal topology before cement mode.
+* Swap levels 16-21 with 22-27 to introduce toroidal topology before locking tiles.
+    * If your current level was in this range, you'll be reset back to level 16.
 * Custom level mode available in the sidebar.
-    * Allows you to turn off cement mode.
+    * Allows you to turn off locking tiles.
     * Allows extreme sized levels.
-    * Allows toroidal topology without a starter island.
-    * Does not allow toroidal topology with odd sizes.
+    * Allows toroidal topology without a starter island (hard mode!).
+    * (Does not allow toroidal topology with odd sizes. It's complicated.)
+    * Settings are unlocked as you encounter them in the linear level progression.
+    * Resume linear levels by collapsing the `Custom Level` settings.
 * Level select available in the side bar to revisit previous levels.
 
 #### 1.4.0
@@ -75,6 +78,8 @@ https://wolfesoftware.com/loops/
  * Toroidal topoly (loops left/right and up/down)
  * Island of locked tiles in the middle of toroidal levels
  * "Smell the roses" after completing a level before the transition to the next level
+
+Project first started 2018-Aug-24.
 
 ## Development
 
