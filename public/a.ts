@@ -1,4 +1,5 @@
 let level_number = 1;
+let is_custom_level = false;
 let unlocked_level_number = 1;
 
 const canvas = document.getElementById("canvas")! as HTMLCanvasElement;
@@ -1429,7 +1430,7 @@ function checkForDone() {
   const unsolved_count = level.countUnsolved();
   if (unsolved_count > 0) return;
 
-  if (unlocked_level_number <= level_number) {
+  if (!is_custom_level && unlocked_level_number <= level_number) {
     // Unlock the next level (in case you want to hit the next level button
     // in the menu instead of smelling the roses).
     unlocked_level_number = level_number + 1;
@@ -1470,6 +1471,7 @@ function renderLevelInfoInSidebar() {
     level_number_span.innerText = level_number.toString();
     level_up_button.disabled = false;
   }
+
   custom_colors_select.value = ColorRules[level.colors];
   setElementVisible(custom_colors_div, unlocked_level_number >= 10);
   setElementVisible(custom_color_two_overlap_option, unlocked_level_number >= 14);
@@ -1493,38 +1495,17 @@ function renderLevelInfoInSidebar() {
   adjustSpinnerRules();
 }
 function handleCustomLevelEdited() {
-  const parameters: LevelParameters = {
-    size: [
-      clamp(1, parseInt(custom_width_spinner.value, 10), 20),
-      clamp(1, parseInt(custom_height_spinner.value, 10), 20),
-    ],
-    shape: Shape[custom_shape_select.value as keyof typeof Shape],
-    colors: ColorRules[custom_colors_select.value as keyof typeof ColorRules],
-    toroidal: custom_toroidal_checkbox.checked,
-    cement_mode: custom_cement_mode_checkbox.checked,
-    rough: custom_rough_checkbox.checked,
-  };
-
-  if (parameters.shape === Shape.Hexagon && parameters.toroidal) {
-    // Only even sizes work for this.
-    if (parameters.size[0] % 2 === 1) {
-      parameters.size[0] += 1;
-    }
-    if (parameters.size[1] % 2 === 1) {
-      parameters.size[1] += 1;
-    }
-  }
-
-  if (!parameters.toroidal) {
-    // UI shows non-padding size
-    parameters.size[0] += 2;
-    parameters.size[1] += 2;
-  }
-
-  setCurrentLevel(generateLevel(parameters));
+  is_custom_level = true;
+  loadNewLevel();
   adjustSpinnerRules();
 }
 function adjustSpinnerRules() {
+  if (is_custom_level) {
+    level_number_span.innerText = "Custom";
+  }
+  setElementVisible(level_up_button, !is_custom_level);
+  setElementVisible(level_down_button, !is_custom_level);
+
   if (level.shape === Shape.Hexagon && level.toroidal) {
     // Prevent the user from getting into the broken combination.
     custom_width_spinner.min = "2";
@@ -1538,6 +1519,10 @@ function adjustSpinnerRules() {
     custom_height_spinner.min = "1";
   }
   rough_label_span.innerText = level.toroidal ? "Locked Island" : "Rough Edges";
+}
+function setCustomLevelSettingsVisible(visible: boolean) {
+  show_custom_level_button.innerText = (visible ? "v" : ">") + " Custom Level";
+  setElementVisible(level_settings_div, visible);
 }
 
 function doFadeOut() {
@@ -1615,7 +1600,11 @@ function doFadeToRoses() {
 function advanceToNextLevel() {
   render_enabled = false;
   try {
-    loadNewLevel({delta: 1});
+    if (is_custom_level) {
+      loadNewLevel();
+    } else {
+      loadNewLevel({delta: 1});
+    }
   } finally {
     render_enabled = true;
   }
@@ -1626,6 +1615,40 @@ let level: Level;
 function loadNewLevel(opts?: {delta?: number, shuffle_tiles?: boolean}) {
   if (opts?.delta != null) {
     level_number += opts.delta;
+    is_custom_level = false;
+  } else if (is_custom_level) {
+    const parameters: LevelParameters = {
+      size: [
+        clamp(1, parseInt(custom_width_spinner.value, 10), 20),
+        clamp(1, parseInt(custom_height_spinner.value, 10), 20),
+      ],
+      shape: Shape[custom_shape_select.value as keyof typeof Shape],
+      colors: ColorRules[custom_colors_select.value as keyof typeof ColorRules],
+      toroidal: custom_toroidal_checkbox.checked,
+      cement_mode: custom_cement_mode_checkbox.checked,
+      rough: custom_rough_checkbox.checked,
+    };
+
+    if (parameters.shape === Shape.Hexagon && parameters.toroidal) {
+      // Only even sizes work for this.
+      if (parameters.size[0] % 2 === 1) {
+        parameters.size[0] += 1;
+      }
+      if (parameters.size[1] % 2 === 1) {
+        parameters.size[1] += 1;
+      }
+    }
+
+    if (!parameters.toroidal) {
+      // UI shows non-padding size
+      parameters.size[0] += 2;
+      parameters.size[1] += 2;
+    }
+
+    parameters.shuffle_tiles = opts?.shuffle_tiles ?? true;
+
+    setCurrentLevel(generateLevel(parameters));
+    return;
   }
   setCurrentLevel(getLevelForCurrentLevelNumber(opts?.shuffle_tiles ?? true));
 }
@@ -1871,6 +1894,7 @@ retry_button.addEventListener("click", function() {
 reset_button.addEventListener("click", function() {
   if (confirm("Really start back at level 1?")) {
     level_number = 1;
+    is_custom_level = false;
     unlocked_level_number = 1;
     loadNewLevel();
     hideSidebar();
@@ -1889,8 +1913,17 @@ level_up_button.addEventListener("click", function() {
   loadNewLevel({delta: 1});
 });
 show_custom_level_button.addEventListener("click", function() {
-  level_settings_div.classList.toggle("hidden");
-  show_custom_level_button.innerText = ( level_settings_div.classList.contains("hidden") ? ">" : "v" )+ " Custom Level";
+  if (level_settings_div.classList.contains("hidden")) {
+    // Show custom settings.
+    setCustomLevelSettingsVisible(true);
+    // Don't actually load a custom level until the player touches the controls.
+  } else {
+    // Back to linear levels.
+    setCustomLevelSettingsVisible(false);
+    // Immediately load linear levels
+    is_custom_level = false;
+    loadNewLevel();
+  }
 });
 custom_colors_select.addEventListener("input", handleCustomLevelEdited);
 custom_shape_select.addEventListener("input", handleCustomLevelEdited);
@@ -1908,6 +1941,7 @@ function save() {
   // preserve any unknown properties
   let save_data = getSaveObject();
   save_data.level_number = level_number;
+  save_data.is_custom_level = is_custom_level;
   save_data.unlocked_level_number = unlocked_level_number;
   save_data.level = {
     // level parameters
@@ -1933,6 +1967,7 @@ function save() {
 (function () {
   let save_data = getSaveObject();
   level_number = save_data.level_number || 1;
+  is_custom_level = save_data.is_custom_level || false;
   if (save_data.unlocked_level_number != null) {
     // Version 1.5+
     unlocked_level_number = save_data.unlocked_level_number;
@@ -2061,6 +2096,7 @@ function save() {
     setGameState(GameState.Playing);
     handleResize();
     checkForDone();
+    setCustomLevelSettingsVisible(is_custom_level);
   } else {
     loadNewLevel();
   }
