@@ -1,4 +1,6 @@
 let level_number = 1;
+let is_custom_level = false;
+let unlocked_level_number = 1;
 
 const canvas = document.getElementById("canvas")! as HTMLCanvasElement;
 const sidebar_tray = document.getElementById("sidebar") as HTMLDivElement;
@@ -7,6 +9,25 @@ const retry_button = document.getElementById("retryButton") as HTMLButtonElement
 const reset_button = document.getElementById("resetButton") as HTMLButtonElement;
 const tile_set_div = document.getElementById("tileSetDiv") as HTMLDivElement;
 const tile_set_select = document.getElementById("tileSetSelect") as HTMLSelectElement;
+const level_number_span = document.getElementById("level_number_span") as HTMLSpanElement;
+const level_down_button = document.getElementById("level_down_button") as HTMLButtonElement;
+const level_up_button = document.getElementById("level_up_button") as HTMLButtonElement;
+const show_custom_level_button = document.getElementById("show_custom_level_button") as HTMLButtonElement;
+const level_settings_div = document.getElementById("level_settings_div") as HTMLDivElement;
+const custom_colors_select = document.getElementById("custom_colors_select") as HTMLSelectElement;
+const custom_colors_div = document.getElementById("custom_colors_div") as HTMLDivElement;
+const custom_color_two_overlap_option = document.getElementById("custom_color_two_overlap_option") as HTMLOptionElement;
+const custom_shape_select = document.getElementById("custom_shape_select") as HTMLSelectElement;
+const custom_shape_div = document.getElementById("custom_shape_div") as HTMLDivElement;
+const custom_toroidal_checkbox = document.getElementById("custom_toroidal_checkbox") as HTMLInputElement;
+const custom_toroidal_div = document.getElementById("custom_toroidal_div") as HTMLDivElement;
+const custom_rough_checkbox = document.getElementById("custom_rough_checkbox") as HTMLInputElement;
+const custom_rough_div = document.getElementById("custom_rough_div") as HTMLDivElement;
+const rough_label_span = document.getElementById("rough_label_span") as HTMLSpanElement;
+const custom_cement_mode_checkbox = document.getElementById("custom_cement_mode_checkbox") as HTMLInputElement;
+const custom_cement_mode_div = document.getElementById("custom_cement_mode_div") as HTMLDivElement;
+const custom_width_spinner = document.getElementById("custom_width_spinner") as HTMLInputElement;
+const custom_height_spinner = document.getElementById("custom_height_spinner") as HTMLInputElement;
 
 const pi = Math.PI;
 const sqrt3 = Math.sqrt(3);
@@ -113,8 +134,7 @@ class Level {
   tiles_per_column: number;
   shape: Shape;
   cement_mode: boolean;
-  color_count: number;
-  allow_overlap: boolean;
+  colors: ColorRules;
   toroidal: boolean;
   rough: boolean;
 
@@ -123,6 +143,8 @@ class Level {
   units_per_tile_y: number;
   tile_animation_time: number;
   edges_per_tile: number;
+  color_count: number;
+  allow_overlap: boolean;
 
   display_offset_x: number;
   display_offset_y: number;
@@ -145,6 +167,7 @@ class Level {
     this.rough = parameters.rough || false;
     this.perfect_so_far = false;
 
+    this.colors = parameters.colors;
     switch (parameters.colors) {
       case ColorRules.Single:
         this.color_count = 1;
@@ -1407,6 +1430,12 @@ function checkForDone() {
   const unsolved_count = level.countUnsolved();
   if (unsolved_count > 0) return;
 
+  if (!is_custom_level && unlocked_level_number <= level_number) {
+    // Unlock the next level (in case you want to hit the next level button
+    // in the menu instead of smelling the roses).
+    unlocked_level_number = level_number + 1;
+  }
+
   // everything is done
   doFadeToRoses();
 }
@@ -1422,9 +1451,78 @@ function setGameState(new_state: GameState) {
   asdf_alpha = 1.0;
   game_state = new_state;
 
-  if (level_number > 27) {
-    tile_set_div.classList.remove("hidden");
+  if (unlocked_level_number < level_number) {
+    // Cheatcodes can get us here.
+    unlocked_level_number = level_number;
   }
+  renderLevelInfoInSidebar();
+}
+
+function renderLevelInfoInSidebar() {
+  level_down_button.disabled = level_number <= 1;
+  if (level_number >= last_level_number) {
+    level_number_span.innerText = last_level_number + "+";
+    tile_set_div.classList.remove("hidden");
+    level_up_button.disabled = true;
+  } else if (level_number >= unlocked_level_number) {
+    level_number_span.innerText = level_number.toString();
+    level_up_button.disabled = true;
+  } else {
+    level_number_span.innerText = level_number.toString();
+    level_up_button.disabled = false;
+  }
+
+  custom_colors_select.value = ColorRules[level.colors];
+  setElementVisible(custom_colors_div, unlocked_level_number >= 10);
+  setElementVisible(custom_color_two_overlap_option, unlocked_level_number >= 14);
+  custom_shape_select.value = Shape[level.shape];
+  setElementVisible(custom_shape_div, unlocked_level_number >= 6);
+  custom_toroidal_checkbox.checked = level.toroidal;
+  setElementVisible(custom_toroidal_div, unlocked_level_number >= 16);
+  custom_rough_checkbox.checked = level.rough;
+  setElementVisible(custom_rough_div, unlocked_level_number >= 11);
+  custom_cement_mode_checkbox.checked = level.cement_mode;
+  setElementVisible(custom_cement_mode_div, unlocked_level_number >= 22);
+  let width = level.tiles_per_row;
+  let height = level.tiles_per_column;
+  if (!level.toroidal) {
+    // Present the size without the border of padding.
+    width -= 2;
+    height -= 2;
+  }
+  custom_width_spinner.value = width.toString();
+  custom_height_spinner.value = height.toString();
+  adjustSpinnerRules();
+}
+function handleCustomLevelEdited() {
+  is_custom_level = true;
+  loadNewLevel();
+  adjustSpinnerRules();
+}
+function adjustSpinnerRules() {
+  if (is_custom_level) {
+    level_number_span.innerText = "Custom";
+  }
+  setElementVisible(level_up_button, !is_custom_level);
+  setElementVisible(level_down_button, !is_custom_level);
+
+  if (level.shape === Shape.Hexagon && level.toroidal) {
+    // Prevent the user from getting into the broken combination.
+    custom_width_spinner.min = "2";
+    custom_width_spinner.step = "2";
+    custom_height_spinner.min = "2";
+    custom_height_spinner.step = "2";
+  } else {
+    custom_width_spinner.step = "1";
+    custom_width_spinner.min = "1";
+    custom_height_spinner.step = "1";
+    custom_height_spinner.min = "1";
+  }
+  rough_label_span.innerText = level.toroidal ? "Locked Island" : "Rough Edges";
+}
+function setCustomLevelSettingsVisible(visible: boolean) {
+  show_custom_level_button.innerText = (visible ? "v" : ">") + " Custom Level";
+  setElementVisible(level_settings_div, visible);
 }
 
 function doFadeOut() {
@@ -1502,7 +1600,11 @@ function doFadeToRoses() {
 function advanceToNextLevel() {
   render_enabled = false;
   try {
-    loadNewLevel({delta: 1});
+    if (is_custom_level) {
+      loadNewLevel();
+    } else {
+      loadNewLevel({delta: 1});
+    }
   } finally {
     render_enabled = true;
   }
@@ -1513,8 +1615,45 @@ let level: Level;
 function loadNewLevel(opts?: {delta?: number, shuffle_tiles?: boolean}) {
   if (opts?.delta != null) {
     level_number += opts.delta;
+    is_custom_level = false;
+  } else if (is_custom_level) {
+    const parameters: LevelParameters = {
+      size: [
+        clamp(1, parseInt(custom_width_spinner.value, 10), 20),
+        clamp(1, parseInt(custom_height_spinner.value, 10), 20),
+      ],
+      shape: Shape[custom_shape_select.value as keyof typeof Shape],
+      colors: ColorRules[custom_colors_select.value as keyof typeof ColorRules],
+      toroidal: custom_toroidal_checkbox.checked,
+      cement_mode: custom_cement_mode_checkbox.checked,
+      rough: custom_rough_checkbox.checked,
+    };
+
+    if (parameters.shape === Shape.Hexagon && parameters.toroidal) {
+      // Only even sizes work for this.
+      if (parameters.size[0] % 2 === 1) {
+        parameters.size[0] += 1;
+      }
+      if (parameters.size[1] % 2 === 1) {
+        parameters.size[1] += 1;
+      }
+    }
+
+    if (!parameters.toroidal) {
+      // UI shows non-padding size
+      parameters.size[0] += 2;
+      parameters.size[1] += 2;
+    }
+
+    parameters.shuffle_tiles = opts?.shuffle_tiles ?? true;
+
+    setCurrentLevel(generateLevel(parameters));
+    return;
   }
-  level = getLevelForCurrentLevelNumber(opts?.shuffle_tiles ?? true);
+  setCurrentLevel(getLevelForCurrentLevelNumber(opts?.shuffle_tiles ?? true));
+}
+function setCurrentLevel(new_level: Level) {
+  level = new_level;
   line_width_multiplier = 1.0;
   save();
 
@@ -1524,6 +1663,8 @@ function loadNewLevel(opts?: {delta?: number, shuffle_tiles?: boolean}) {
 }
 function getLevelForCurrentLevelNumber(shuffle_tiles: boolean): Level {
   if (level_number < 1) level_number = 1;
+  if (level_number > last_level_number) level_number = last_level_number;
+  if (!Number.isInteger(level_number)) level_number = 1;
 
   switch (level_number) {
     case 1:
@@ -1577,39 +1718,42 @@ function getLevelForCurrentLevelNumber(shuffle_tiles: boolean): Level {
         return {size:[8, 8], shape: Shape.Hexagon, colors: ColorRules.TwoOverlap, rough: true};
 
       case 16:
-        return {size:[10, 10], shape: Shape.Square, colors: ColorRules.TwoOverlap, cement_mode: true, rough: true};
+        return {size:[6, 6], shape: Shape.Square, colors: ColorRules.TwoOverlap, toroidal: true, rough: true};
       case 17:
-        return {size:[9, 9], shape: Shape.Hexagon, colors: ColorRules.TwoOverlap, cement_mode: true, rough: true};
+        return {size:[6, 6], shape: Shape.Square, colors: ColorRules.TwoSeparate, toroidal: true, rough: true};
       case 18:
-        return {size:[10, 10], shape: Shape.Square, colors: ColorRules.TwoSeparate, cement_mode: true, rough: true};
+        return {size:[6, 6], shape: Shape.Square, colors: ColorRules.Single, toroidal: true, rough: true};
       case 19:
-        return {size:[9, 9], shape: Shape.Hexagon, colors: ColorRules.TwoSeparate, cement_mode: true, rough: true};
+        return {size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.TwoOverlap, toroidal: true, rough: true};
       case 20:
-        return {size:[10, 10], shape: Shape.Square, colors: ColorRules.Single, cement_mode: true, rough: true};
+        return {size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.TwoSeparate, toroidal: true, rough: true};
       case 21:
-        return {size:[9, 9], shape: Shape.Hexagon, colors: ColorRules.Single, cement_mode: true, rough: true};
+        return {size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.Single, toroidal: true, rough: true};
 
       case 22:
-        return {size:[6, 6], shape: Shape.Square, colors: ColorRules.TwoOverlap, toroidal: true, rough: true};
+        return {size:[10, 10], shape: Shape.Square, colors: ColorRules.TwoOverlap, cement_mode: true, rough: true};
       case 23:
-        return {size:[6, 6], shape: Shape.Square, colors: ColorRules.TwoSeparate, toroidal: true, rough: true};
+        return {size:[9, 9], shape: Shape.Hexagon, colors: ColorRules.TwoOverlap, cement_mode: true, rough: true};
       case 24:
-        return {size:[6, 6], shape: Shape.Square, colors: ColorRules.Single, toroidal: true, rough: true};
+        return {size:[10, 10], shape: Shape.Square, colors: ColorRules.TwoSeparate, cement_mode: true, rough: true};
       case 25:
-        return {size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.TwoOverlap, toroidal: true, rough: true};
+        return {size:[9, 9], shape: Shape.Hexagon, colors: ColorRules.TwoSeparate, cement_mode: true, rough: true};
       case 26:
-        return {size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.TwoSeparate, toroidal: true, rough: true};
+        return {size:[10, 10], shape: Shape.Square, colors: ColorRules.Single, cement_mode: true, rough: true};
       case 27:
-        return {size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.Single, toroidal: true, rough: true};
-      default:
+        return {size:[9, 9], shape: Shape.Hexagon, colors: ColorRules.Single, cement_mode: true, rough: true};
+
+      case last_level_number:
         // the final challenge
         return {size:[6, 6], shape: Shape.Hexagon, colors: ColorRules.Single, cement_mode: true, toroidal: true, rough: true, perfectable: true};
+      default: throw new AssertionFailure();
     }
   }();
 
   params.shuffle_tiles = shuffle_tiles;
   return generateLevel(params);
 }
+const last_level_number = 28;
 
 function oneColor(values: number[]): number[][] {
   let result = [];
@@ -1693,7 +1837,7 @@ function generateLevel(parameters: LevelParameters, tiles?: number[][]): Level {
     }
 
     // rotate the tiles randomly
-    if (parameters.shuffle_tiles) {
+    if (parameters.shuffle_tiles ?? true) {
       for (let tile_index of level.allTileIndexes()) {
         if (!level.frozen_tiles[tile_index]) {
           level.rotateRandomly(tile_index);
@@ -1729,6 +1873,19 @@ function hashU32(input: number): number {
   x ^= x >> 14;
   return x;
 }
+function clamp(min: number, x: number, max: number): number {
+  if (x < min) return min;
+  if (x > max) return max;
+  return x;
+}
+
+function setElementVisible(element: HTMLElement, isVisible: boolean) {
+  if (isVisible) {
+    element.classList.remove("hidden");
+  } else {
+    element.classList.add("hidden");
+  }
+}
 
 retry_button.addEventListener("click", function() {
   loadNewLevel();
@@ -1737,6 +1894,8 @@ retry_button.addEventListener("click", function() {
 reset_button.addEventListener("click", function() {
   if (confirm("Really start back at level 1?")) {
     level_number = 1;
+    is_custom_level = false;
+    unlocked_level_number = 1;
     loadNewLevel();
     hideSidebar();
   }
@@ -1747,6 +1906,33 @@ tile_set_select.addEventListener("input", function() {
   save();
 });
 
+level_down_button.addEventListener("click", function() {
+  loadNewLevel({delta: -1});
+});
+level_up_button.addEventListener("click", function() {
+  loadNewLevel({delta: 1});
+});
+show_custom_level_button.addEventListener("click", function() {
+  if (level_settings_div.classList.contains("hidden")) {
+    // Show custom settings.
+    setCustomLevelSettingsVisible(true);
+    // Don't actually load a custom level until the player touches the controls.
+  } else {
+    // Back to linear levels.
+    setCustomLevelSettingsVisible(false);
+    // Immediately load linear levels
+    is_custom_level = false;
+    loadNewLevel();
+  }
+});
+custom_colors_select.addEventListener("input", handleCustomLevelEdited);
+custom_shape_select.addEventListener("input", handleCustomLevelEdited);
+custom_toroidal_checkbox.addEventListener("change", handleCustomLevelEdited);
+custom_rough_checkbox.addEventListener("change", handleCustomLevelEdited);
+custom_cement_mode_checkbox.addEventListener("change", handleCustomLevelEdited);
+custom_width_spinner.addEventListener("input", handleCustomLevelEdited);
+custom_height_spinner.addEventListener("input", handleCustomLevelEdited);
+
 function getSaveObject(): {[key:string]:any} {
   let save_data_str = window.localStorage.getItem("loops");
   return save_data_str ? JSON.parse(save_data_str) : {};
@@ -1755,15 +1941,13 @@ function save() {
   // preserve any unknown properties
   let save_data = getSaveObject();
   save_data.level_number = level_number;
+  save_data.is_custom_level = is_custom_level;
+  save_data.unlocked_level_number = unlocked_level_number;
   save_data.level = {
     // level parameters
     size: [level.tiles_per_row, level.tiles_per_column],
     shape: level.shape,
-    colors: (
-      level.color_count === 1 ? ColorRules.Single :
-      level.allow_overlap ? ColorRules.TwoOverlap :
-      ColorRules.TwoSeparate
-    ),
+    colors: level.colors,
     cement_mode: level.cement_mode,
     toroidal: level.toroidal,
     rough: level.rough,
@@ -1783,6 +1967,26 @@ function save() {
 (function () {
   let save_data = getSaveObject();
   level_number = save_data.level_number || 1;
+  is_custom_level = save_data.is_custom_level || false;
+  if (save_data.unlocked_level_number != null) {
+    // Version 1.5+
+    unlocked_level_number = save_data.unlocked_level_number;
+  } else {
+    // The upgrade to version 1.5 swapped levels 16-21 with levels 22-27
+    // to introduce toroidal topology before cement mode.
+    if (16 <= level_number && level_number <= 27) {
+      // Sorry buddy.
+      alert(
+        `New version of Loops released! Levels 16-27 have been updated, ` +
+        `so your progress through level ${level_number} unfortunately cannot be loaded. :( ` +
+        `You've been set back to level 16. Please enjoy the new sequence of levels! ` +
+        `(And don't forget to check the sidebar for cool new stuff!) :)`
+      );
+      level_number = 16;
+      delete save_data.level;
+    }
+    unlocked_level_number = level_number;
+  }
 
   tile_set = TileSet[save_data.tile_set as keyof typeof TileSet] ?? TileSet.Trypo;
   tile_set_select.value = TileSet[tile_set];
@@ -1892,6 +2096,7 @@ function save() {
     setGameState(GameState.Playing);
     handleResize();
     checkForDone();
+    setCustomLevelSettingsVisible(is_custom_level);
   } else {
     loadNewLevel();
   }

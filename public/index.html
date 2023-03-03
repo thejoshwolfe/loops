@@ -51,7 +51,7 @@
         top: 0px;
         left: -275px;
         width: 275px;
-        padding: 20px 0px;
+        padding: 50px 0px 0px 12px;
         height: 100%;
         background-color: #f6f6f6;
         color: #343838;
@@ -61,6 +61,17 @@
       }
       /* slide in */
       #sidebar.active { left: 0px; }
+
+      #sidebar > div {
+        margin: 12px 0px;
+      }
+      #level_settings_div {
+        padding-left: 12px;
+      }
+
+      input[type=number] {
+        width: 2em;
+      }
 
       .hidden {
         display: none !important;
@@ -76,11 +87,28 @@
       <div id="bottom"></div>
     </div>
     <div id="sidebar">
-      <div>&nbsp;</div>
       <div><button id="retryButton">Retry Level</button></div>
-      <div>&nbsp;</div>
-      <div><button id="resetButton">Erase Progress</button></div>
-      <div>&nbsp;</div>
+      <div>Level:
+        <button id="level_down_button">&lt;</button>
+        <span id="level_number_span">1</span>
+        <button id="level_up_button">&gt;</button>
+      </div>
+      <button id="show_custom_level_button">&gt; Custom Level</button>
+      <div id="level_settings_div" class="hidden">
+        <div id="custom_colors_div">Colors: <select id="custom_colors_select">
+          <option value="Single">Single</option>
+          <option value="TwoSeparate">Double</option>
+          <option id="custom_color_two_overlap_option" value="TwoOverlap">Overlap</option>
+        </select></div>
+        <div id="custom_shape_div">Shape: <select id="custom_shape_select">
+          <option value="Square">Square</option>
+          <option value="Hexagon">Hexagon</option>
+        </select></div>
+        <div id="custom_toroidal_div"><label><input type="checkbox" id="custom_toroidal_checkbox"> Wrapping</label></div>
+        <div id="custom_rough_div"><label><input type="checkbox" id="custom_rough_checkbox"> <span id="rough_label_span">Rough Edges</span></label></div>
+        <div id="custom_cement_mode_div"><label><input type="checkbox" id="custom_cement_mode_checkbox"> Lock Tiles</label></div>
+        <div>Size: <input type="number" min=1 max=20 id="custom_width_spinner">x<input type="number" min=1 max=20 id="custom_height_spinner"></div>
+      </div>
       <div id="tileSetDiv" class="hidden">
         Tile Set:
         <select id="tileSetSelect">
@@ -89,12 +117,15 @@
           <option value="Iso">Iso</option>
           <option value="Chaos">Chaos</option>
         </select>
-        <div>&nbsp;</div>
       </div>
       <div>&nbsp;</div>
-      <div>Version 1.4.0</div>
-      <div>* <a href="https://github.com/thejoshwolfe/loops/blob/master/README.md">what's new</a></div>
-      <div>* <a href="https://github.com/thejoshwolfe/loops">source code</a></div>
+      <div><button id="resetButton">Erase Progress</button></div>
+      <div>Version 1.4.0
+        <ul>
+          <li>* <a href="https://github.com/thejoshwolfe/loops/blob/master/README.md">what's new</a></li>
+          <li>* <a href="https://github.com/thejoshwolfe/loops">source code</a></li>
+        </ul>
+      </div>
     </div>
 
     <script src="a.js"></script>
