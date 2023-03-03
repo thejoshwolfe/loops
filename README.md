@@ -15,6 +15,8 @@ https://wolfesoftware.com/loops/
 
 #### 1.5.0
 
+2023-Mar-03
+
 * Swap levels 16-21 with 22-27 to introduce toroidal topology before locking tiles.
     * If your current level was in this range, you'll be reset back to level 16.
 * Custom level mode available in the sidebar.
