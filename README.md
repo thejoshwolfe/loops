@@ -13,6 +13,13 @@ https://wolfesoftware.com/loops/
 
 ## Version History
 
+#### 1.5.1
+
+* Custom levels are perfectable if they're 6x6 or larger, toroidal, with locking tiles and either:
+    * Single color and hexagonal or:
+    * Don't include the locked island.
+* No, there is no UI indication for perfectable level settings; it's an easter egg!
+
 #### 1.5.0
 
 2023-Mar-03

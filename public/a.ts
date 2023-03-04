@@ -530,7 +530,7 @@ class Level {
                   break;
                 case EndpointStyle.LargeDot:
                   context.beginPath();
-                  context.arc(0, 0, 0.25, 0, 2*pi);
+                  context.arc(0, 0, line_width_multiplier * 0.25, 0, 2*pi);
                   context.fill();
 
                   context.beginPath();
@@ -1646,6 +1646,16 @@ function loadNewLevel(opts?: {delta?: number, shuffle_tiles?: boolean}) {
     }
 
     parameters.shuffle_tiles = opts?.shuffle_tiles ?? true;
+
+    // Allow perfectable custom levels if they're ... idk ... sufficiently hard enough?
+    if (parameters.size[0] >= 6 && parameters.size[1] >= 6 && parameters.toroidal && parameters.cement_mode && (
+      // the final level has the hardest color and shape:
+      parameters.colors == ColorRules.Single && parameters.shape == Shape.Hexagon ||
+      // but we'll allow easier color and shape if you turn off the starter island:
+      !parameters.rough
+    )) {
+      parameters.perfectable = true;
+    }
 
     setCurrentLevel(generateLevel(parameters));
     return;
