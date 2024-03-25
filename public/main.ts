@@ -1,3 +1,5 @@
+import { solveLevel } from "./solver.js";
+
 let level_number = 1;
 let is_custom_level = false;
 let unlocked_level_number = 1;
@@ -128,7 +130,7 @@ interface LevelParameters {
   shuffle_tiles?: boolean,
 };
 
-class Level {
+export class Level {
   // LevelParameters
   tiles_per_row: number;
   tiles_per_column: number;
@@ -1225,6 +1227,12 @@ window.addEventListener("keydown", function(event: KeyboardEvent) {
       if (event.shiftKey) {
         loadNewLevel({shuffle_tiles: false});
         checkForDone();
+      }
+      break;
+
+    case "KeyS":
+      if (event.shiftKey) {
+        solveLevel(level);
       }
       break;
   }
